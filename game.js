@@ -23,7 +23,7 @@ let shells = [];
 let targetsHit = 0;
 let shotsLeft = 20;
 let round = 1;
-let timer = 90;
+let timer = 90; // 90 секунд на раунд
 let roundActive = true;
 let wagonSpeed = 2;
 let cannonSpeed = 2;
@@ -153,7 +153,7 @@ function init() {
 // Игровой цикл
 function gameLoop(timestamp) {
     if (!lastTime) lastTime = timestamp;
-    const delta = (timestamp - lastTime) / 16.67; // Примерно 60 FPS
+    const delta = (timestamp - lastTime) / 1000; // delta в секундах
     lastTime = timestamp;
 
     update(delta);
@@ -187,7 +187,7 @@ function update(delta) {
     });
 
     // Обновление таймера
-    timer -= delta * (90 / 90); // Убедимся, что таймер идет с реальной скоростью
+    timer -= delta; // Уменьшаем таймер на delta секунд
     if (timer <= 0) {
         endRound(false);
     }
@@ -237,7 +237,7 @@ function shoot() {
     }
 }
 
-// Проверка столкновений двух объектов (простой AABB для вагонетки и круговой ядер)
+// Проверка столкновений двух объектов (круг и прямоугольник)
 function checkCollision(shell, wagon) {
     // Находим ближайшую точку на вагонетке к ядру
     const closestX = clamp(shell.x, wagon.x, wagon.x + wagon.width);
