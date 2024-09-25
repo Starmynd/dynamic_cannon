@@ -9,16 +9,6 @@ const scoreText = document.getElementById('score');
 const gameOverScreen = document.getElementById('gameOverScreen');
 const gameOverMessage = document.getElementById('gameOverMessage');
 
-// Загрузка изображений
-const cannonImg = new Image();
-cannonImg.src = 'https://i.imgur.com/6Xh1VZP.png'; // Замените на ссылку на изображение пушки
-
-const wagonImg = new Image();
-wagonImg.src = 'https://i.imgur.com/NZ8V7xT.png'; // Замените на ссылку на изображение вагонетки
-
-const shellImg = new Image();
-shellImg.src = 'https://i.imgur.com/2v3XgQK.png'; // Замените на ссылку на изображение ядра
-
 // Звуки
 const backgroundMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'); // Замените на ссылку на фоновую музыку
 backgroundMusic.loop = true;
@@ -43,11 +33,12 @@ let lastTime = 0;
 class Cannon {
     constructor() {
         this.width = 50;
-        this.height = 50;
+        this.height = 30;
         this.x = canvas.width / 2 - this.width / 2;
-        this.y = canvas.height - this.height - 10;
+        this.y = canvas.height - this.height - 20;
         this.speed = cannonSpeed;
         this.direction = 1; // 1 - вправо, -1 - влево
+        this.color = '#FF5733'; // Оранжево-красный цвет пушки
     }
 
     update(delta) {
@@ -60,7 +51,19 @@ class Cannon {
     }
 
     draw() {
-        ctx.drawImage(cannonImg, this.x, this.y, this.width, this.height);
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        // Рисуем корпус пушки
+        ctx.rect(this.x, this.y, this.width, this.height);
+        ctx.fill();
+
+        // Рисуем дуло пушки
+        ctx.beginPath();
+        ctx.moveTo(this.x + this.width / 2, this.y);
+        ctx.lineTo(this.x + this.width / 2 - 10, this.y - 20);
+        ctx.lineTo(this.x + this.width / 2 + 10, this.y - 20);
+        ctx.closePath();
+        ctx.fill();
     }
 }
 
@@ -70,9 +73,10 @@ class Wagon {
         this.width = 80;
         this.height = 40;
         this.x = canvas.width / 2 - this.width / 2;
-        this.y = 50;
+        this.y = 60;
         this.speed = speed;
         this.direction = 1; // 1 - вправо, -1 - влево
+        this.color = '#8B4513'; // Коричневый цвет вагонетки
     }
 
     update(delta) {
@@ -85,20 +89,31 @@ class Wagon {
     }
 
     draw() {
-        ctx.drawImage(wagonImg, this.x, this.y, this.width, this.height);
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        // Рисуем корпус вагонетки
+        ctx.rect(this.x, this.y, this.width, this.height);
+        ctx.fill();
+
+        // Рисуем колеса
+        ctx.fillStyle = '#000'; // Черные колеса
+        ctx.beginPath();
+        ctx.arc(this.x + 15, this.y + this.height, 10, 0, Math.PI * 2);
+        ctx.arc(this.x + this.width - 15, this.y + this.height, 10, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
 
 // Класс Ядра
 class Shell {
     constructor(x, y, velocityX, velocityY) {
-        this.width = 20;
-        this.height = 20;
+        this.radius = 10;
         this.x = x;
         this.y = y;
         this.vx = velocityX;
         this.vy = velocityY;
         this.active = true;
+        this.color = '#FFD700'; // Золотой цвет ядра
     }
 
     update(delta) {
@@ -106,28 +121,39 @@ class Shell {
         this.y += this.vy * delta;
 
         // Проверка на выход за границы экрана
-        if (this.y < -this.height || this.x < -this.width || this.x > canvas.width + this.width) {
+        if (this.y < -this.radius || this.x < -this.radius || this.x > canvas.width + this.radius) {
             this.active = false;
         }
     }
 
     draw() {
-        ctx.drawImage(shellImg, this.x, this.y, this.width, this.height);
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
 
 // Инициализация игры
 function init() {
+    // Установка размера Canvas
+    resizeCanvas();
+
+    // Инициализация объектов
     cannon = new Cannon();
     wagon = new Wagon(wagonSpeed);
+
+    // Запуск фоновой музыки
     backgroundMusic.play();
+
+    // Запуск игрового цикла
     requestAnimationFrame(gameLoop);
 }
 
 // Игровой цикл
 function gameLoop(timestamp) {
     if (!lastTime) lastTime = timestamp;
-    const delta = (timestamp - lastTime) / 16.67; // Примерное количество кадров в секунду
+    const delta = (timestamp - lastTime) / 16.67; // Примерно 60 FPS
     lastTime = timestamp;
 
     update(delta);
@@ -161,7 +187,7 @@ function update(delta) {
     });
 
     // Обновление таймера
-    timer -= delta * (90 / 90); // Примерно 1 секунда за 60 кадров
+    timer -= delta * (90 / 90); // Убедимся, что таймер идет с реальной скоростью
     if (timer <= 0) {
         endRound(false);
     }
@@ -174,8 +200,7 @@ function update(delta) {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Рисование фона (небо и земля)
-    // Небо уже задано в CSS, рисуем землю
+    // Рисование фона (небо уже задано в CSS, рисуем землю)
     ctx.fillStyle = '#228B22'; // Зеленый цвет земли
     ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
 
@@ -196,7 +221,7 @@ window.addEventListener('keydown', function(e) {
 function shoot() {
     if (shotsLeft <= 0) return;
 
-    const shellX = cannon.x + cannon.width / 2 - 10;
+    const shellX = cannon.x + cannon.width / 2;
     const shellY = cannon.y;
     const velocityX = cannon.direction * cannon.speed * 0.5; // Инерция от пушки
     const velocityY = -10; // Скорость вверх
@@ -212,12 +237,24 @@ function shoot() {
     }
 }
 
-// Проверка столкновений двух объектов (простой AABB)
-function checkCollision(obj1, obj2) {
-    return obj1.x < obj2.x + obj2.width &&
-           obj1.x + obj1.width > obj2.x &&
-           obj1.y < obj2.y + obj2.height &&
-           obj1.y + obj1.height > obj2.y;
+// Проверка столкновений двух объектов (простой AABB для вагонетки и круговой ядер)
+function checkCollision(shell, wagon) {
+    // Находим ближайшую точку на вагонетке к ядру
+    const closestX = clamp(shell.x, wagon.x, wagon.x + wagon.width);
+    const closestY = clamp(shell.y, wagon.y, wagon.y + wagon.height);
+
+    // Вычисляем расстояние до ближайшей точки
+    const distanceX = shell.x - closestX;
+    const distanceY = shell.y - closestY;
+
+    const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+
+    return distanceSquared < (shell.radius * shell.radius);
+}
+
+// Функция ограничивает значение между min и max
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
 }
 
 // Обновление UI
@@ -235,7 +272,7 @@ function endRound(success) {
     gameOverScreen.style.display = 'block';
     if (success) {
         gameOverMessage.textContent = `Поздравляем! Вы выиграли раунд ${round}.`;
-        // Переход к следующему раунду
+        // Переход к следующему раунду через 2 секунды
         setTimeout(() => {
             round++;
             targetsHit = 0;
@@ -245,9 +282,12 @@ function endRound(success) {
             cannonSpeed += 0.5;
             cannon.speed = cannonSpeed;
             wagon.speed = wagonSpeed;
+            shells = [];
             gameOverScreen.style.display = 'none';
+            backgroundMusic.currentTime = 0;
             backgroundMusic.play();
             roundActive = true;
+            lastTime = 0;
             requestAnimationFrame(gameLoop);
         }, 2000);
     } else {
@@ -274,15 +314,36 @@ function restartGame() {
     requestAnimationFrame(gameLoop);
 }
 
-// Инициализация после загрузки изображений
-window.onload = function() {
-    // Убедитесь, что все изображения загружены
-    const imagesLoaded = () => {
-        if (cannonImg.complete && wagonImg.complete && shellImg.complete) {
-            init();
+// Ресайз Canvas при изменении размера окна
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    if (cannon) {
+        cannon.x = canvas.width / 2 - cannon.width / 2;
+        cannon.y = canvas.height - cannon.height - 20;
+    }
+    if (wagon) {
+        wagon.x = canvas.width / 2 - wagon.width / 2;
+    }
+}
+
+// Автоматический ресайз при загрузке и изменении окна
+window.addEventListener('resize', resizeCanvas);
+
+// Интеграция с VK API (Авторизация Пользователя)
+document.getElementById('authButton').addEventListener('click', function() {
+    VK.Auth.login(function(response) {
+        if (response.session) {
+            alert('Успешная авторизация через VK!');
+            // Здесь можно добавить дополнительные действия после авторизации
+            // Например, сохранить результаты игры на сервере
         } else {
-            setTimeout(imagesLoaded, 100);
+            alert('Авторизация отменена');
         }
-    };
-    imagesLoaded();
+    }, 2); // 2 - доступ к базовым данным пользователя
+});
+
+// Инициализация игры после загрузки страницы
+window.onload = function() {
+    init();
 };
