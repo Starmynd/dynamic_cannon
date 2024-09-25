@@ -226,20 +226,24 @@
                 // Рисуем ковш (ведро)
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
-                ctx.arc(this.x + 15, this.y + 10, 15, Math.PI, 0, true); // Половина окружности для ковша
-                ctx.rect(this.x + 15, this.y + 10, this.width - 30, this.height - 10); // Корпус ковша
+                // Половина окружности для передней части ведра
+                ctx.arc(this.x + 15, this.y + 10, 15, Math.PI, 0, false);
+                // Корпус ведра
+                ctx.lineTo(this.x + 45, this.y + 10);
+                ctx.arc(this.x + 45, this.y + 10, 15, 0, Math.PI, false);
                 ctx.closePath();
                 ctx.fill();
 
-                // Рисуем ручку ковша
+                // Рисуем ручки ковша
                 ctx.strokeStyle = '#000';
                 ctx.lineWidth = 2;
+                // Левая ручка
                 ctx.beginPath();
-                ctx.arc(this.x + 15, this.y + 10, 15, Math.PI / 4, (3 * Math.PI) / 4, false); // Левый изгиб ручки
+                ctx.arc(this.x + 15, this.y + 10, 15, Math.PI / 4, (3 * Math.PI) / 4, false);
                 ctx.stroke();
-
+                // Правая ручка
                 ctx.beginPath();
-                ctx.arc(this.x + this.width - 15, this.y + 10, 15, (5 * Math.PI) / 4, (7 * Math.PI) / 4, false); // Правый изгиб ручки
+                ctx.arc(this.x + 45, this.y + 10, 15, (5 * Math.PI) / 4, (7 * Math.PI) / 4, false);
                 ctx.stroke();
             }
         }
@@ -350,7 +354,7 @@
                 // Проверка столкновений с вагонеткой
                 if (checkCollision(shell, wagon)) {
                     if (shell.hasBounced && shell.y <= wagon.y + wagon.height / 2) {
-                        // Попадание засчитывается только если ядро отразилось и попало в верхнюю часть вагонетки
+                        // Попадание засчитывается только если ядро отразилось и попало в верхнюю часть ведра
                         targetsHit++;
                         hitSound.play();
                         console.log(`Hit! Targets Hit: ${targetsHit}`);
@@ -369,6 +373,11 @@
 
             // Проверка окончания раунда
             if (timer <= 0) {
+                endRound(false);
+            }
+
+            // Проверка окончания выстрелов
+            if (shotsLeft <= 0 && !shell) {
                 endRound(false);
             }
 
@@ -414,10 +423,10 @@
             const velocityX = cannon.direction * cannon.speed * 0.5; // Инерция от пушки
 
             // Рассчитаем velocityY для достижения вагонетки за ~0.7 секунды
-            // Расстояние по вертикали: y=630 (пушка) до y=20 (вагонетка) = 610 пикселей
-            // velocityY = distance / time = 610 / 0.7 ≈ 871.43 пикселей/сек
+            // Расстояние по вертикали: y=630 (пушка) до y=100 (вагонетка) = 530 пикселей
+            // velocityY = distance / time = 530 / 0.7 ≈ 757.14 пикселей/сек
             // Направление вверх, поэтому отрицательное
-            const velocityY = -871.43;
+            const velocityY = -757.14;
 
             shell = new Shell(shellX, shellY, velocityX, velocityY);
             shotsLeft--;
@@ -426,10 +435,6 @@
             console.log(`Shot fired! Shots left: ${shotsLeft}`);
 
             updateUI();
-
-            if (shotsLeft <= 0 && targetsHit < 10 && !shell) {
-                endRound(false);
-            }
         }
 
         // Проверка столкновений двух объектов (круг и прямоугольник)
