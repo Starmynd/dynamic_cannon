@@ -37,7 +37,7 @@ class Cannon {
         this.height = 30;
         this.x = canvas.width / 2 - this.width / 2;
         this.y = canvas.height - this.height - 10; // Немного выше нижней границы
-        this.speed = cannonSpeed;
+        this.speed = cannonSpeed; // pixels per second
         this.direction = 1; // 1 - вправо, -1 - влево
         this.color = '#FF5733'; // Оранжево-красный цвет пушки
     }
@@ -52,6 +52,9 @@ class Cannon {
     }
 
     draw() {
+        // Отладочное сообщение
+        console.log('Drawing Cannon at position:', this.x, this.y);
+
         ctx.fillStyle = this.color;
         ctx.beginPath();
         // Рисуем корпус пушки
@@ -75,7 +78,7 @@ class Wagon {
         this.height = 40;
         this.x = canvas.width / 2 - this.width / 2;
         this.y = 20; // Немного ниже верхней границы
-        this.speed = speed;
+        this.speed = speed; // pixels per second
         this.direction = 1; // 1 - вправо, -1 - влево
         this.color = '#8B4513'; // Коричневый цвет вагонетки
     }
@@ -90,6 +93,9 @@ class Wagon {
     }
 
     draw() {
+        // Отладочное сообщение
+        console.log('Drawing Wagon at position:', this.x, this.y);
+
         ctx.fillStyle = this.color;
         ctx.beginPath();
         // Рисуем корпус вагонетки
@@ -111,8 +117,8 @@ class Shell {
         this.radius = 10;
         this.x = x;
         this.y = y;
-        this.vx = velocityX;
-        this.vy = velocityY;
+        this.vx = velocityX; // pixels per second
+        this.vy = velocityY; // pixels per second
         this.active = true;
         this.color = '#FFD700'; // Золотой цвет ядра
     }
@@ -128,6 +134,9 @@ class Shell {
     }
 
     draw() {
+        // Отладочное сообщение
+        console.log('Drawing Shell at position:', this.x, this.y);
+
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
@@ -137,6 +146,7 @@ class Shell {
 
 // Инициализация игры
 function init() {
+    console.log('Initializing game');
     // Инициализация объектов
     cannon = new Cannon();
     wagon = new Wagon(wagonSpeed);
@@ -153,6 +163,9 @@ function init() {
 
 // Игровой цикл
 function gameLoop(timestamp) {
+    // Отладочное сообщение
+    console.log('gameLoop called at timestamp:', timestamp);
+
     if (!endTime) {
         endTime = timestamp + 90000; // Установка времени окончания, если оно не задано
     }
@@ -172,6 +185,9 @@ function update(timestamp) {
 
     if (timer < 0) timer = 0;
 
+    // Отладочное сообщение
+    console.log(`Updating game state. Timer: ${timer.toFixed(2)}s, Round: ${round}, Shots Left: ${shotsLeft}, Targets Hit: ${targetsHit}`);
+
     // Обновление объектов
     const delta = 1 / 60; // Предполагаемая частота обновления ~60 FPS
     cannon.update(delta);
@@ -187,6 +203,7 @@ function update(timestamp) {
             shell.active = false;
             targetsHit++;
             hitSound.play();
+            console.log(`Hit! Targets Hit: ${targetsHit}`);
             if (targetsHit >= 10) {
                 endRound(true);
             }
@@ -204,6 +221,9 @@ function update(timestamp) {
 
 // Рисование объектов
 function draw() {
+    // Отладочное сообщение
+    console.log('Drawing frame');
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Рисование объектов
@@ -228,7 +248,10 @@ shootButton.addEventListener('click', function() {
 
 // Функция выстрела
 function shoot() {
-    if (shotsLeft <= 0) return;
+    if (shotsLeft <= 0) {
+        console.log('No shots left!');
+        return;
+    }
 
     const shellX = cannon.x + cannon.width / 2;
     const shellY = cannon.y;
@@ -243,6 +266,8 @@ function shoot() {
     shells.push(new Shell(shellX, shellY, velocityX, velocityY));
     shotsLeft--;
     shootSound.play();
+
+    console.log(`Shot fired! Shots left: ${shotsLeft}`);
 
     updateUI();
 
@@ -281,6 +306,7 @@ function updateUI() {
 
 // Завершение раунда
 function endRound(success) {
+    console.log(`End round. Success: ${success}`);
     roundActive = false;
     backgroundMusic.pause();
     gameOverScreen.style.display = 'block';
@@ -311,6 +337,7 @@ function endRound(success) {
 
 // Перезапуск игры
 function restartGame() {
+    console.log('Restarting game');
     gameOverScreen.style.display = 'none';
     round = 1;
     targetsHit = 0;
