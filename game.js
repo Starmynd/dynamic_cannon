@@ -8,6 +8,7 @@ const shotsText = document.getElementById('shots');
 const scoreText = document.getElementById('score');
 const gameOverScreen = document.getElementById('gameOverScreen');
 const gameOverMessage = document.getElementById('gameOverMessage');
+const shootButton = document.getElementById('shootButton');
 
 // Звуки
 const backgroundMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'); // Замените на ссылку на фоновую музыку
@@ -23,6 +24,7 @@ let shells = [];
 let targetsHit = 0;
 let shotsLeft = 20;
 let round = 1;
+let timer = 90; // 90 секунд на раунд
 let roundActive = true;
 let wagonSpeed = 2;
 let cannonSpeed = 2;
@@ -34,7 +36,7 @@ class Cannon {
         this.width = 50;
         this.height = 30;
         this.x = canvas.width / 2 - this.width / 2;
-        this.y = canvas.height - this.height - 20;
+        this.y = canvas.height - this.height - 10; // Немного выше нижней границы
         this.speed = cannonSpeed;
         this.direction = 1; // 1 - вправо, -1 - влево
         this.color = '#FF5733'; // Оранжево-красный цвет пушки
@@ -72,7 +74,7 @@ class Wagon {
         this.width = 80;
         this.height = 40;
         this.x = canvas.width / 2 - this.width / 2;
-        this.y = 60;
+        this.y = 20; // Немного ниже верхней границы
         this.speed = speed;
         this.direction = 1; // 1 - вправо, -1 - влево
         this.color = '#8B4513'; // Коричневый цвет вагонетки
@@ -135,9 +137,6 @@ class Shell {
 
 // Инициализация игры
 function init() {
-    // Установка размера Canvas
-    resizeCanvas();
-
     // Инициализация объектов
     cannon = new Cannon();
     wagon = new Wagon(wagonSpeed);
@@ -207,9 +206,8 @@ function update(timestamp) {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Рисование фона (небо уже задано в CSS, рисуем землю)
-    ctx.fillStyle = '#228B22'; // Зеленый цвет земли
-    ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+    // Рисование границ игровой зоны (уже сделано через CSS, дополнительные элементы можно добавить здесь)
+    // Например, можно нарисовать сетку или другие декоративные элементы
 
     // Рисование объектов
     cannon.draw();
@@ -224,6 +222,13 @@ window.addEventListener('keydown', function(e) {
     }
 });
 
+// Обработка нажатия кнопки "Выстрелить" на мобильных устройствах
+shootButton.addEventListener('click', function() {
+    if (roundActive) {
+        shoot();
+    }
+});
+
 // Функция выстрела
 function shoot() {
     if (shotsLeft <= 0) return;
@@ -231,7 +236,15 @@ function shoot() {
     const shellX = cannon.x + cannon.width / 2;
     const shellY = cannon.y;
     const velocityX = cannon.direction * cannon.speed * 0.5; // Инерция от пушки
-    const velocityY = -10; // Скорость вверх
+
+    // Рассчитаем velocityY для достижения вагонетки за 0.7 секунды
+    // Позиция вагонетки: y = 20
+    // Позиция выстрела: y = 640 - 30 - 10 = 600
+    // Расстояние: 600 - 20 = 580 пикселей
+    // Время: 0.7 секунд
+    // velocityY = distance / time = 580 / 0.7 ≈ 828.57 пикселей/сек
+    // Направление вверх, поэтому отрицательное
+    const velocityY = -828.57;
 
     shells.push(new Shell(shellX, shellY, velocityX, velocityY));
     shotsLeft--;
@@ -291,66 +304,4 @@ function endRound(success) {
             wagon.speed = wagonSpeed;
             shells = [];
             gameOverScreen.style.display = 'none';
-            backgroundMusic.currentTime = 0;
-            backgroundMusic.play();
-            roundActive = true;
-            endTime = performance.now() + 90000; // Установка времени окончания для нового раунда
-            requestAnimationFrame(gameLoop);
-        }, 2000);
-    } else {
-        gameOverMessage.textContent = `Время вышло или вы исчерпали выстрелы. Игра окончена!`;
-    }
-}
-
-// Перезапуск игры
-function restartGame() {
-    gameOverScreen.style.display = 'none';
-    round = 1;
-    targetsHit = 0;
-    shotsLeft = 20;
-    timer = 90;
-    wagonSpeed = 2;
-    cannonSpeed = 2;
-    cannon.speed = cannonSpeed;
-    wagon.speed = wagonSpeed;
-    shells = [];
-    roundActive = true;
-    backgroundMusic.currentTime = 0;
-    backgroundMusic.play();
-    endTime = performance.now() + 90000; // Установка времени окончания для нового раунда
-    requestAnimationFrame(gameLoop);
-}
-
-// Ресайз Canvas при изменении размера окна
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    if (cannon) {
-        cannon.x = canvas.width / 2 - cannon.width / 2;
-        cannon.y = canvas.height - cannon.height - 20;
-    }
-    if (wagon) {
-        wagon.x = canvas.width / 2 - wagon.width / 2;
-    }
-}
-
-// Автоматический ресайз при загрузке и изменении окна
-window.addEventListener('resize', resizeCanvas);
-
-// Интеграция с VK API (Авторизация Пользователя)
-document.getElementById('authButton').addEventListener('click', function() {
-    VK.Auth.login(function(response) {
-        if (response.session) {
-            alert('Успешная авторизация через VK!');
-            // Здесь можно добавить дополнительные действия после авторизации
-            // Например, сохранить результаты игры на сервере
-        } else {
-            alert('Авторизация отменена');
-        }
-    }, 2); // 2 - доступ к базовым данным пользователя
-});
-
-// Инициализация игры после загрузки страницы
-window.onload = function() {
-    init();
-};
+            backgro
