@@ -33,7 +33,7 @@
         /* Игровое поле */
         #gameField {
             width: 100%;
-            height: 80%;
+            height: 100%;
             background: #228B22; /* Зеленый фон земли */
             position: relative;
             border: 5px solid #000; /* Черные границы игровой зоны */
@@ -47,17 +47,16 @@
         }
         /* Интерфейс игры */
         #ui {
-            width: 100%;
-            height: 20%;
-            background: #333;
+            position: absolute;
+            bottom: 60px; /* Расстояние от нижнего края для размещения кнопки */
+            width: 90%;
+            max-width: 480px;
+            background: rgba(51, 51, 51, 0.8); /* Полупрозрачный фон для читаемости */
             color: white;
             padding: 10px;
             box-sizing: border-box;
             text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            border-radius: 10px;
         }
         /* Информационные элементы */
         .infoRow {
@@ -144,7 +143,7 @@
         // Объекты игры
         let cannon;
         let wagon;
-        let shells = [];
+        let shell = null; // Только одно активное ядро
         let targetsHit = 0;
         let shotsLeft = 20;
         let round = 1;
@@ -239,15 +238,35 @@
                 this.vy = velocityY; // pixels per second
                 this.active = true;
                 this.color = '#FFD700'; // Золотой цвет ядра
+                this.hasBounced = false; // Флаг, указывающий, отразилось ли ядро
             }
 
             update(delta) {
                 this.x += this.vx * delta;
                 this.y += this.vy * delta;
 
-                // Проверка на выход за границы экрана
-                if (this.y < -this.radius || this.x < -this.radius || this.x > canvas.width + this.radius) {
+                // Проверка на столкновение со стенами и потолком
+                // Левая и правая стены
+                if (this.x - this.radius <= 0) {
+                    this.x = this.radius; // Корректировка позиции
+                    this.vx *= -1;
+                    this.hasBounced = true;
+                }
+                if (this.x + this.radius >= canvas.width) {
+                    this.x = canvas.width - this.radius; // Корректировка позиции
+                    this.vx *= -1;
+                    this.hasBounced = true;
+                }
+                // Потолок
+                if (this.y - this.radius <= 0) {
+                    this.y = this.radius; // Корректировка позиции
+                    this.vy *= -1;
+                    this.hasBounced = true;
+                }
+                // Нижняя граница: убираем ядро
+                if (this.y - this.radius > canvas.height) {
                     this.active = false;
+                    shell = null; // Разрешаем новое выстреливание
                 }
             }
 
@@ -308,22 +327,29 @@
             cannon.update(delta);
             wagon.update(delta);
 
-            // Обновление ядер
-            shells.forEach(shell => shell.update(delta));
-            shells = shells.filter(shell => shell.active);
+            // Обновление ядра
+            if (shell) {
+                shell.update(delta);
 
-            // Проверка столкновений
-            shells.forEach(shell => {
+                // Проверка столкновений с вагонеткой
                 if (checkCollision(shell, wagon)) {
-                    shell.active = false;
-                    targetsHit++;
-                    hitSound.play();
-                    console.log(`Hit! Targets Hit: ${targetsHit}`);
-                    if (targetsHit >= 10) {
-                        endRound(true);
+                    if (shell.hasBounced) {
+                        // Попадание засчитывается только если ядро отразилось
+                        targetsHit++;
+                        hitSound.play();
+                        console.log(`Hit! Targets Hit: ${targetsHit}`);
+                        shell.active = false;
+                        shell = null; // Разрешаем новое выстреливание
+                        if (targetsHit >= 10) {
+                            endRound(true);
+                        }
+                    } else {
+                        // Отражение ядра без засчитывания попадания
+                        shell.vy *= -1;
+                        shell.hasBounced = true;
                     }
                 }
-            });
+            }
 
             // Проверка окончания раунда
             if (timer <= 0) {
@@ -341,19 +367,21 @@
             // Рисование объектов
             cannon.draw();
             wagon.draw();
-            shells.forEach(shell => shell.draw());
+            if (shell) {
+                shell.draw();
+            }
         }
 
         // Обработка нажатия клавиши "Пробел" для выстрела
         window.addEventListener('keydown', function(e) {
-            if (e.code === 'Space' && roundActive) {
+            if (e.code === 'Space' && roundActive && !shell) {
                 shoot();
             }
         });
 
         // Обработка нажатия кнопки "Выстрелить" на мобильных устройствах
         shootButton.addEventListener('click', function() {
-            if (roundActive) {
+            if (roundActive && !shell) {
                 shoot();
             }
         });
@@ -375,7 +403,7 @@
             // Направление вверх, поэтому отрицательное
             const velocityY = -871.43;
 
-            shells.push(new Shell(shellX, shellY, velocityX, velocityY));
+            shell = new Shell(shellX, shellY, velocityX, velocityY);
             shotsLeft--;
             shootSound.play();
 
@@ -383,7 +411,7 @@
 
             updateUI();
 
-            if (shotsLeft <= 0 && targetsHit < 10) {
+            if (shotsLeft <= 0 && targetsHit < 10 && !shell) {
                 endRound(false);
             }
         }
@@ -434,7 +462,7 @@
                     cannonSpeed += 50; // Увеличение скорости пушки
                     cannon.speed = cannonSpeed;
                     wagon.speed = wagonSpeed;
-                    shells = [];
+                    shell = null;
                     gameOverScreen.style.display = 'none';
                     backgroundMusic.currentTime = 0;
                     backgroundMusic.play().catch((error) => {
@@ -461,7 +489,7 @@
             cannonSpeed = 100;
             cannon.speed = cannonSpeed;
             wagon.speed = wagonSpeed;
-            shells = [];
+            shell = null;
             roundActive = true;
             backgroundMusic.currentTime = 0;
             backgroundMusic.play().catch((error) => {
@@ -476,6 +504,13 @@
             const gameField = document.getElementById('gameField');
             canvas.width = gameField.clientWidth;
             canvas.height = gameField.clientHeight;
+
+            // Перезапуск игры при изменении размеров
+            if (cannon && wagon) {
+                cannon.x = canvas.width / 2 - cannon.width / 2;
+                cannon.y = canvas.height - cannon.height - 10;
+                wagon.x = canvas.width / 2 - wagon.width / 2;
+            }
         }
 
         // Инициализация игры после загрузки страницы
