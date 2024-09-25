@@ -19,8 +19,8 @@
         /* Контейнер игры */
         #gameContainer {
             width: 100%;
-            max-width: 720px;
             height: 100%;
+            max-width: 720px;
             max-height: 1280px;
             background: #f0f0f0; /* Светлый фон контейнера */
             position: relative;
@@ -33,9 +33,7 @@
         /* Игровое поле */
         #gameField {
             width: 100%;
-            max-width: 480px;
             height: 80%;
-            max-height: 640px;
             background: #228B22; /* Зеленый фон земли */
             position: relative;
             border: 5px solid #000; /* Черные границы игровой зоны */
@@ -50,26 +48,33 @@
         /* Интерфейс игры */
         #ui {
             width: 100%;
-            max-width: 480px;
+            height: 20%;
             background: #333;
             color: white;
             padding: 10px;
             box-sizing: border-box;
             text-align: center;
             display: flex;
-            justify-content: space-around;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
+        }
+        /* Информационные элементы */
+        .infoRow {
+            margin: 5px 0;
+            font-size: 18px;
         }
         /* Кнопка выстрела внутри интерфейса */
         #shootButton {
-            padding: 10px 20px;
-            font-size: 16px;
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
             border: none;
             background: #4CAF50;
             color: white;
             border-radius: 5px;
             cursor: pointer;
-            flex-shrink: 0;
+            margin-top: 10px;
         }
         /* Экран окончания игры */
         #gameOverScreen {
@@ -100,13 +105,13 @@
 <body>
     <div id="gameContainer">
         <div id="gameField">
-            <canvas id="gameCanvas" width="480" height="640"></canvas>
+            <canvas id="gameCanvas"></canvas>
         </div>
         <div id="ui">
-            <div id="roundInfo">Раунд: 1</div>
-            <div id="timer">Время: 90</div>
-            <div id="shots">Выстрелов: 20</div>
-            <div id="score">Забито: 0/10</div>
+            <div class="infoRow" id="roundInfo">Раунд: 1</div>
+            <div class="infoRow" id="timer">Время: 90</div>
+            <div class="infoRow" id="shots">Выстрелов: 20</div>
+            <div class="infoRow" id="score">Забито: 0/10</div>
             <button id="shootButton">Выстрелить</button>
         </div>
         <div id="gameOverScreen">
@@ -258,6 +263,9 @@
         function init() {
             console.log('Initializing game');
 
+            // Настройка размеров Canvas
+            resizeCanvas();
+
             // Инициализация объектов
             cannon = new Cannon();
             wagon = new Wagon(wagonSpeed);
@@ -295,9 +303,6 @@
 
             if (timer < 0) timer = 0;
 
-            // Отладочное сообщение
-            // console.log(`Updating game state. Timer: ${timer.toFixed(2)}s, Round: ${round}, Shots Left: ${shotsLeft}, Targets Hit: ${targetsHit}`);
-
             // Обновление объектов
             const delta = 1 / 60; // Предполагаемая частота обновления ~60 FPS
             cannon.update(delta);
@@ -331,9 +336,6 @@
 
         // Рисование объектов
         function draw() {
-            // Отладочное сообщение
-            // console.log('Drawing frame');
-
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             // Рисование объектов
@@ -469,10 +471,23 @@
             requestAnimationFrame(gameLoop);
         }
 
+        // Настройка размеров Canvas под размер игрового поля
+        function resizeCanvas() {
+            const gameField = document.getElementById('gameField');
+            canvas.width = gameField.clientWidth;
+            canvas.height = gameField.clientHeight;
+        }
+
         // Инициализация игры после загрузки страницы
         window.onload = function() {
+            resizeCanvas();
             init();
         };
+
+        // Обработка изменения размера окна (для адаптивности)
+        window.addEventListener('resize', function() {
+            resizeCanvas();
+        });
     </script>
 </body>
 </html>
