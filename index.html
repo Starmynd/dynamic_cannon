@@ -223,14 +223,14 @@
                 ctx.lineTo(this.x + this.width / 2, this.y);
                 ctx.stroke();
 
-                // Рисуем ведро (черный круг с углублением сверху)
+                // Рисуем ведро (черный круг с небольшим углублением сверху)
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
-                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2, Math.PI + 0.2, -0.2, false); // Углубление сверху
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2, Math.PI, 0, false); // Полукруг для основы ведра
                 ctx.lineTo(this.x + this.width / 2, this.y + this.height / 2);
                 ctx.fill();
 
-                // Рисуем ручку ведра
+                // Рисуем ручки ведра
                 ctx.strokeStyle = '#000';
                 ctx.lineWidth = 2;
                 // Левая ручка
@@ -440,7 +440,7 @@
 
         // Проверка столкновений двух объектов (круг и прямоугольник)
         function checkCollision(shell, wagon) {
-            // Находим ближайшую точку на вагонетке к ядру
+            // Находим ближайшую точку на ведре к ядру
             const closestX = clamp(shell.x, wagon.x, wagon.x + wagon.width);
             const closestY = clamp(shell.y, wagon.y, wagon.y + wagon.height);
 
