@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Dynamic Cannon</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #87ceeb; /* Голубой фон неба */
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            display: block;
+            background: #228B22; /* Зеленый фон земли */
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px #000;
+        }
+        #gameOverScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            display: none;
+        }
+        #gameOverScreen button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="ui">
+        <div id="roundInfo">Раунд: 1</div>
+        <div id="timer">Время: 90</div>
+        <div id="shots">Выстрелов: 20</div>
+        <div id="score">Забито: 0/10</div>
+    </div>
+    <div id="gameOverScreen">
+        <div id="gameOverMessage"></div>
+        <button onclick="restartGame()">Играть снова</button>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
