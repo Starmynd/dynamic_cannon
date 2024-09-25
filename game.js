@@ -23,11 +23,10 @@ let shells = [];
 let targetsHit = 0;
 let shotsLeft = 20;
 let round = 1;
-let timer = 90; // 90 секунд на раунд
 let roundActive = true;
 let wagonSpeed = 2;
 let cannonSpeed = 2;
-let lastTime = 0;
+let endTime = 0; // Временной маркер окончания раунда
 
 // Класс Пушки
 class Cannon {
@@ -146,17 +145,20 @@ function init() {
     // Запуск фоновой музыки
     backgroundMusic.play();
 
+    // Установка времени окончания раунда
+    endTime = performance.now() + 90000; // 90 секунд от текущего времени
+
     // Запуск игрового цикла
     requestAnimationFrame(gameLoop);
 }
 
 // Игровой цикл
 function gameLoop(timestamp) {
-    if (!lastTime) lastTime = timestamp;
-    const delta = (timestamp - lastTime) / 1000; // delta в секундах
-    lastTime = timestamp;
+    if (!endTime) {
+        endTime = timestamp + 90000; // Установка времени окончания, если оно не задано
+    }
 
-    update(delta);
+    update(timestamp);
     draw();
 
     if (roundActive) {
@@ -165,8 +167,14 @@ function gameLoop(timestamp) {
 }
 
 // Обновление состояния игры
-function update(delta) {
+function update(timestamp) {
+    // Вычисляем оставшееся время
+    timer = (endTime - timestamp) / 1000; // В секундах
+
+    if (timer < 0) timer = 0;
+
     // Обновление объектов
+    const delta = 1 / 60; // Предполагаемая частота обновления ~60 FPS
     cannon.update(delta);
     wagon.update(delta);
 
@@ -186,8 +194,7 @@ function update(delta) {
         }
     });
 
-    // Обновление таймера
-    timer -= delta; // Уменьшаем таймер на delta секунд
+    // Проверка окончания раунда
     if (timer <= 0) {
         endRound(false);
     }
@@ -287,7 +294,7 @@ function endRound(success) {
             backgroundMusic.currentTime = 0;
             backgroundMusic.play();
             roundActive = true;
-            lastTime = 0;
+            endTime = performance.now() + 90000; // Установка времени окончания для нового раунда
             requestAnimationFrame(gameLoop);
         }, 2000);
     } else {
@@ -310,7 +317,7 @@ function restartGame() {
     roundActive = true;
     backgroundMusic.currentTime = 0;
     backgroundMusic.play();
-    lastTime = 0;
+    endTime = performance.now() + 90000; // Установка времени окончания для нового раунда
     requestAnimationFrame(gameLoop);
 }
 
