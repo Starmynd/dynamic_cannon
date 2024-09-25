@@ -206,9 +206,6 @@ function update(timestamp) {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Рисование границ игровой зоны (уже сделано через CSS, дополнительные элементы можно добавить здесь)
-    // Например, можно нарисовать сетку или другие декоративные элементы
-
     // Рисование объектов
     cannon.draw();
     wagon.draw();
@@ -237,14 +234,11 @@ function shoot() {
     const shellY = cannon.y;
     const velocityX = cannon.direction * cannon.speed * 0.5; // Инерция от пушки
 
-    // Рассчитаем velocityY для достижения вагонетки за 0.7 секунды
-    // Позиция вагонетки: y = 20
-    // Позиция выстрела: y = 640 - 30 - 10 = 600
-    // Расстояние: 600 - 20 = 580 пикселей
-    // Время: 0.7 секунд
-    // velocityY = distance / time = 580 / 0.7 ≈ 828.57 пикселей/сек
+    // Рассчитаем velocityY для достижения вагонетки за ~0.7 секунды
+    // Расстояние по вертикали: y=630 (пушка) до y=20 (вагонетка) = 610 пикселей
+    // velocityY = distance / time = 610 / 0.7 ≈ 871.43 пикселей/сек
     // Направление вверх, поэтому отрицательное
-    const velocityY = -828.57;
+    const velocityY = -871.43;
 
     shells.push(new Shell(shellX, shellY, velocityX, velocityY));
     shotsLeft--;
@@ -304,4 +298,56 @@ function endRound(success) {
             wagon.speed = wagonSpeed;
             shells = [];
             gameOverScreen.style.display = 'none';
-            backgro
+            backgroundMusic.currentTime = 0;
+            backgroundMusic.play();
+            roundActive = true;
+            endTime = performance.now() + 90000; // Установка времени окончания для нового раунда
+            requestAnimationFrame(gameLoop);
+        }, 2000);
+    } else {
+        gameOverMessage.textContent = `Время вышло или вы исчерпали выстрелы. Игра окончена!`;
+    }
+}
+
+// Перезапуск игры
+function restartGame() {
+    gameOverScreen.style.display = 'none';
+    round = 1;
+    targetsHit = 0;
+    shotsLeft = 20;
+    timer = 90;
+    wagonSpeed = 2;
+    cannonSpeed = 2;
+    cannon.speed = cannonSpeed;
+    wagon.speed = wagonSpeed;
+    shells = [];
+    roundActive = true;
+    backgroundMusic.currentTime = 0;
+    backgroundMusic.play();
+    endTime = performance.now() + 90000; // Установка времени окончания для нового раунда
+    requestAnimationFrame(gameLoop);
+}
+
+// Ресайз Canvas при изменении размера окна (не требуется, так как Canvas фиксирован)
+function resizeCanvas() {
+    // Canvas имеет фиксированные размеры 480x640 пикселей
+    // Дополнительная логика для адаптивности может быть добавлена здесь
+}
+
+// Интеграция с VK API (Авторизация Пользователя)
+document.getElementById('authButton').addEventListener('click', function() {
+    VK.Auth.login(function(response) {
+        if (response.session) {
+            alert('Успешная авторизация через VK!');
+            // Здесь можно добавить дополнительные действия после авторизации
+            // Например, сохранить результаты игры на сервере
+        } else {
+            alert('Авторизация отменена');
+        }
+    }, 2); // 2 - доступ к базовым данным пользователя
+});
+
+// Инициализация игры после загрузки страницы
+window.onload = function() {
+    init();
+};
