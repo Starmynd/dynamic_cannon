@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Dynamic Cannon</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        /* Сброс отступов и установка базовых стилей */
         body {
             margin: 0;
             padding: 0;
@@ -14,42 +16,62 @@
             height: 100vh;
             font-family: Arial, sans-serif;
         }
+        /* Контейнер игры */
         #gameContainer {
-            width: 720px;
-            height: 1280px;
+            width: 100%;
+            max-width: 720px;
+            height: 100%;
+            max-height: 1280px;
             background: #f0f0f0; /* Светлый фон контейнера */
             position: relative;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
+        /* Игровое поле */
         #gameField {
-            width: 480px;
-            height: 640px;
+            width: 100%;
+            max-width: 480px;
+            height: 80%;
+            max-height: 640px;
             background: #228B22; /* Зеленый фон земли */
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
+            position: relative;
             border: 5px solid #000; /* Черные границы игровой зоны */
             box-sizing: border-box;
         }
+        /* Canvas занимает всю область игрового поля */
         canvas {
             display: block;
             width: 100%;
             height: 100%;
         }
+        /* Интерфейс игры */
         #ui {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 480px;
+            width: 100%;
+            max-width: 480px;
             background: #333;
             color: white;
-            padding: 20px;
+            padding: 10px;
             box-sizing: border-box;
             text-align: center;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
         }
+        /* Кнопка выстрела внутри интерфейса */
+        #shootButton {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            background: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        /* Экран окончания игры */
         #gameOverScreen {
             position: absolute;
             top: 50%;
@@ -73,34 +95,19 @@
             color: white;
             border-radius: 5px;
         }
-        /* Кнопка выстрела для мобильных устройств */
-        #shootButton {
-            position: absolute;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 15px 30px;
-            font-size: 18px;
-            border: none;
-            background: #4CAF50;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            z-index: 1;
-        }
     </style>
 </head>
 <body>
     <div id="gameContainer">
         <div id="gameField">
             <canvas id="gameCanvas" width="480" height="640"></canvas>
-            <button id="shootButton">Выстрелить</button>
         </div>
         <div id="ui">
             <div id="roundInfo">Раунд: 1</div>
             <div id="timer">Время: 90</div>
             <div id="shots">Выстрелов: 20</div>
             <div id="score">Забито: 0/10</div>
+            <button id="shootButton">Выстрелить</button>
         </div>
         <div id="gameOverScreen">
             <div id="gameOverMessage"></div>
