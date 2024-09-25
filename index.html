@@ -192,7 +192,7 @@
             }
         }
 
-        // Класс Вагонетки (Ковш на веревке)
+        // Класс Вагонетки (Ведро на веревке)
         class Wagon {
             constructor(speed) {
                 this.width = 60;
@@ -201,7 +201,7 @@
                 this.y = 100; // Положение на веревке
                 this.speed = speed; // pixels per second
                 this.direction = -1; // Начинаем движение в противоположную сторону от пушки
-                this.color = '#8B4513'; // Коричневый цвет ковша
+                this.color = '#000000'; // Черный цвет ведра
                 this.ropeY = 80; // Высота веревки
             }
 
@@ -223,27 +223,23 @@
                 ctx.lineTo(this.x + this.width / 2, this.y);
                 ctx.stroke();
 
-                // Рисуем ковш (ведро)
+                // Рисуем ведро (черный круг с углублением сверху)
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
-                // Половина окружности для передней части ведра
-                ctx.arc(this.x + 15, this.y + 10, 15, Math.PI, 0, false);
-                // Корпус ведра
-                ctx.lineTo(this.x + 45, this.y + 10);
-                ctx.arc(this.x + 45, this.y + 10, 15, 0, Math.PI, false);
-                ctx.closePath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2, Math.PI + 0.2, -0.2, false); // Углубление сверху
+                ctx.lineTo(this.x + this.width / 2, this.y + this.height / 2);
                 ctx.fill();
 
-                // Рисуем ручки ковша
+                // Рисуем ручку ведра
                 ctx.strokeStyle = '#000';
                 ctx.lineWidth = 2;
                 // Левая ручка
                 ctx.beginPath();
-                ctx.arc(this.x + 15, this.y + 10, 15, Math.PI / 4, (3 * Math.PI) / 4, false);
+                ctx.arc(this.x + this.width / 2 - 10, this.y + this.height / 2 - 10, 10, 0, Math.PI / 2, false);
                 ctx.stroke();
                 // Правая ручка
                 ctx.beginPath();
-                ctx.arc(this.x + 45, this.y + 10, 15, (5 * Math.PI) / 4, (7 * Math.PI) / 4, false);
+                ctx.arc(this.x + this.width / 2 + 10, this.y + this.height / 2 - 10, 10, Math.PI / 2, Math.PI, false);
                 ctx.stroke();
             }
         }
@@ -326,7 +322,7 @@
                 endTime = timestamp + timer * 1000; // Установка времени окончания, если оно не задано
             }
 
-            update(timestamp);
+            update();
             draw();
 
             if (roundActive) {
@@ -335,9 +331,10 @@
         }
 
         // Обновление состояния игры
-        function update(timestamp) {
+        function update() {
             // Вычисляем оставшееся время
-            timer = (endTime - timestamp) / 1000; // В секундах
+            const currentTime = performance.now();
+            timer = (endTime - currentTime) / 1000; // В секундах
 
             if (timer < 0) timer = 0;
 
@@ -536,7 +533,7 @@
                 cannon.y = canvas.height - cannon.height - 10;
                 wagon.x = canvas.width / 2 - wagon.width / 2;
                 wagon.ropeY = 80; // Обновить позицию веревки, если нужно
-                wagon.y = 100; // Обновить позицию ковша
+                wagon.y = 100; // Обновить позицию ведра
             }
         }
 
