@@ -151,7 +151,7 @@
         let timer = 90; // 90 секунд на раунд
         let roundActive = true;
         let wagonSpeed = 100; // pixels per second
-        let cannonSpeed = 100; // pixels per second
+        let cannonSpeed = 115; // pixels per second (увеличено на 15%)
         let endTime = 0; // Временной маркер окончания раунда
 
         // Класс Пушки
@@ -195,8 +195,8 @@
         // Класс Вагонетки (Ковш на веревке)
         class Wagon {
             constructor(speed) {
-                this.width = 80;
-                this.height = 50;
+                this.width = 60;
+                this.height = 40;
                 this.x = canvas.width / 2 - this.width / 2;
                 this.y = 100; // Положение на веревке
                 this.speed = speed; // pixels per second
@@ -223,14 +223,24 @@
                 ctx.lineTo(this.x + this.width / 2, this.y);
                 ctx.stroke();
 
-                // Рисуем ковш (примерно в форме буквы "C")
+                // Рисуем ковш (ведро)
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
-                ctx.arc(this.x + 20, this.y + 10, 20, Math.PI / 2, Math.PI * 3 / 2);
-                ctx.lineTo(this.x + 60, this.y + 30);
-                ctx.arc(this.x + 40, this.y + 30, 20, Math.PI * 3 / 2, Math.PI / 2, true);
+                ctx.arc(this.x + 15, this.y + 10, 15, Math.PI, 0, true); // Половина окружности для ковша
+                ctx.rect(this.x + 15, this.y + 10, this.width - 30, this.height - 10); // Корпус ковша
                 ctx.closePath();
                 ctx.fill();
+
+                // Рисуем ручку ковша
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x + 15, this.y + 10, 15, Math.PI / 4, (3 * Math.PI) / 4, false); // Левый изгиб ручки
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(this.x + this.width - 15, this.y + 10, 15, (5 * Math.PI) / 4, (7 * Math.PI) / 4, false); // Правый изгиб ручки
+                ctx.stroke();
             }
         }
 
@@ -464,8 +474,8 @@
                     targetsHit = 0;
                     shotsLeft = 20;
                     timer = 90;
-                    wagonSpeed += 50; // Увеличение скорости вагонетки
-                    cannonSpeed += 50; // Увеличение скорости пушки
+                    wagonSpeed *= 1.15; // Увеличение скорости вагонетки на 15%
+                    cannonSpeed *= 1.15; // Увеличение скорости пушки на 15%
                     cannon.speed = cannonSpeed;
                     wagon.speed = wagonSpeed;
                     shell = null;
@@ -479,7 +489,7 @@
                     requestAnimationFrame(gameLoop);
                 }, 2000);
             } else {
-                gameOverMessage.textContent = `Время вышло или вы исчерпали выстрелы. Игра окончена!`;
+                gameOverMessage.textContent = `Game Over! Вы исчерпали выстрелы или время вышло.`;
             }
         }
 
@@ -492,7 +502,7 @@
             shotsLeft = 20;
             timer = 90;
             wagonSpeed = 100;
-            cannonSpeed = 100;
+            cannonSpeed = 115; // Начальная скорость пушки с учетом увеличения на 15%
             cannon.speed = cannonSpeed;
             wagon.speed = wagonSpeed;
             shell = null;
