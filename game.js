@@ -1,3 +1,4 @@
+// Получение элементов Canvas и контекста
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -10,7 +11,7 @@ const gameOverScreen = document.getElementById('gameOverScreen');
 const gameOverMessage = document.getElementById('gameOverMessage');
 const shootButton = document.getElementById('shootButton');
 
-// Звуки
+// Звуки (опционально)
 const backgroundMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'); // Замените на ссылку на фоновую музыку
 backgroundMusic.loop = true;
 
@@ -26,8 +27,8 @@ let shotsLeft = 20;
 let round = 1;
 let timer = 90; // 90 секунд на раунд
 let roundActive = true;
-let wagonSpeed = 2;
-let cannonSpeed = 2;
+let wagonSpeed = 2; // pixels per second
+let cannonSpeed = 2; // pixels per second
 let endTime = 0; // Временной маркер окончания раунда
 
 // Класс Пушки
@@ -52,9 +53,6 @@ class Cannon {
     }
 
     draw() {
-        // Отладочное сообщение
-        console.log('Drawing Cannon at position:', this.x, this.y);
-
         ctx.fillStyle = this.color;
         ctx.beginPath();
         // Рисуем корпус пушки
@@ -93,9 +91,6 @@ class Wagon {
     }
 
     draw() {
-        // Отладочное сообщение
-        console.log('Drawing Wagon at position:', this.x, this.y);
-
         ctx.fillStyle = this.color;
         ctx.beginPath();
         // Рисуем корпус вагонетки
@@ -134,9 +129,6 @@ class Shell {
     }
 
     draw() {
-        // Отладочное сообщение
-        console.log('Drawing Shell at position:', this.x, this.y);
-
         ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
@@ -147,15 +139,18 @@ class Shell {
 // Инициализация игры
 function init() {
     console.log('Initializing game');
+
     // Инициализация объектов
     cannon = new Cannon();
     wagon = new Wagon(wagonSpeed);
 
-    // Запуск фоновой музыки
-    backgroundMusic.play();
+    // Запуск фоновой музыки (опционально)
+    backgroundMusic.play().catch((error) => {
+        console.log('Autoplay failed:', error);
+    });
 
     // Установка времени окончания раунда
-    endTime = performance.now() + 90000; // 90 секунд от текущего времени
+    endTime = performance.now() + timer * 1000; // 90 секунд от текущего времени
 
     // Запуск игрового цикла
     requestAnimationFrame(gameLoop);
@@ -163,11 +158,8 @@ function init() {
 
 // Игровой цикл
 function gameLoop(timestamp) {
-    // Отладочное сообщение
-    console.log('gameLoop called at timestamp:', timestamp);
-
     if (!endTime) {
-        endTime = timestamp + 90000; // Установка времени окончания, если оно не задано
+        endTime = timestamp + timer * 1000; // Установка времени окончания, если оно не задано
     }
 
     update(timestamp);
@@ -184,9 +176,6 @@ function update(timestamp) {
     timer = (endTime - timestamp) / 1000; // В секундах
 
     if (timer < 0) timer = 0;
-
-    // Отладочное сообщение
-    console.log(`Updating game state. Timer: ${timer.toFixed(2)}s, Round: ${round}, Shots Left: ${shotsLeft}, Targets Hit: ${targetsHit}`);
 
     // Обновление объектов
     const delta = 1 / 60; // Предполагаемая частота обновления ~60 FPS
@@ -221,9 +210,6 @@ function update(timestamp) {
 
 // Рисование объектов
 function draw() {
-    // Отладочное сообщение
-    console.log('Drawing frame');
-
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Рисование объектов
@@ -232,7 +218,7 @@ function draw() {
     shells.forEach(shell => shell.draw());
 }
 
-// Обработка нажатия кнопки "Пробел" для выстрела
+// Обработка нажатия клавиши "Пробел" для выстрела
 window.addEventListener('keydown', function(e) {
     if (e.code === 'Space' && roundActive) {
         shoot();
@@ -327,7 +313,7 @@ function endRound(success) {
             backgroundMusic.currentTime = 0;
             backgroundMusic.play();
             roundActive = true;
-            endTime = performance.now() + 90000; // Установка времени окончания для нового раунда
+            endTime = performance.now() + timer * 1000; // Установка времени окончания для нового раунда
             requestAnimationFrame(gameLoop);
         }, 2000);
     } else {
@@ -350,8 +336,10 @@ function restartGame() {
     shells = [];
     roundActive = true;
     backgroundMusic.currentTime = 0;
-    backgroundMusic.play();
-    endTime = performance.now() + 90000; // Установка времени окончания для нового раунда
+    backgroundMusic.play().catch((error) => {
+        console.log('Autoplay failed:', error);
+    });
+    endTime = performance.now() + timer * 1000; // Установка времени окончания для нового раунда
     requestAnimationFrame(gameLoop);
 }
 
@@ -362,6 +350,8 @@ function resizeCanvas() {
 }
 
 // Интеграция с VK API (Авторизация Пользователя)
+// Если VK API не используется, можно закомментировать или удалить следующие строки
+/*
 document.getElementById('authButton').addEventListener('click', function() {
     VK.Auth.login(function(response) {
         if (response.session) {
@@ -373,6 +363,7 @@ document.getElementById('authButton').addEventListener('click', function() {
         }
     }, 2); // 2 - доступ к базовым данным пользователя
 });
+*/
 
 // Инициализация игры после загрузки страницы
 window.onload = function() {
