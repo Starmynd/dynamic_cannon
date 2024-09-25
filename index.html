@@ -286,7 +286,6 @@
                 // Нижняя граница: убираем ядро
                 if (this.y - this.radius > canvas.height) {
                     this.active = false;
-                    shell = null; // Разрешаем новое выстреливание
                 }
             }
 
@@ -368,6 +367,11 @@
                         shell.vy *= -1;
                         shell.hasBounced = true;
                     }
+                }
+
+                // Проверка, упало ли ядро за экран
+                if (!shell.active) {
+                    shell = null; // Разрешаем новое выстреливание
                 }
             }
 
