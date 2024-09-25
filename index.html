@@ -33,7 +33,7 @@
         /* Игровое поле */
         #gameField {
             width: 100%;
-            height: 100%;
+            height: 80%;
             background: #228B22; /* Зеленый фон земли */
             position: relative;
             border: 5px solid #000; /* Черные границы игровой зоны */
@@ -47,16 +47,17 @@
         }
         /* Интерфейс игры */
         #ui {
-            position: absolute;
-            bottom: 60px; /* Расстояние от нижнего края для размещения кнопки */
-            width: 90%;
-            max-width: 480px;
+            width: 100%;
+            height: 20%;
             background: rgba(51, 51, 51, 0.8); /* Полупрозрачный фон для читаемости */
             color: white;
             padding: 10px;
             box-sizing: border-box;
             text-align: center;
-            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
         /* Информационные элементы */
         .infoRow {
@@ -191,39 +192,44 @@
             }
         }
 
-        // Класс Вагонетки
+        // Класс Вагонетки (Ковш на веревке)
         class Wagon {
             constructor(speed) {
                 this.width = 80;
-                this.height = 40;
+                this.height = 50;
                 this.x = canvas.width / 2 - this.width / 2;
-                this.y = 20; // Немного ниже верхней границы
+                this.y = 100; // Положение на веревке
                 this.speed = speed; // pixels per second
-                this.direction = 1; // 1 - вправо, -1 - влево
-                this.color = '#8B4513'; // Коричневый цвет вагонетки
+                this.direction = -1; // Начинаем движение в противоположную сторону от пушки
+                this.color = '#8B4513'; // Коричневый цвет ковша
+                this.ropeY = 80; // Высота веревки
             }
 
             update(delta) {
                 this.x += this.direction * this.speed * delta;
 
-                // Поворот направления при достижении границ
+                // Поворот направления при достижении границ (веревки)
                 if (this.x > canvas.width - this.width || this.x < 0) {
                     this.direction *= -1;
                 }
             }
 
             draw() {
+                // Рисуем веревку
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.ropeY);
+                ctx.lineTo(this.x + this.width / 2, this.y);
+                ctx.stroke();
+
+                // Рисуем ковш (примерно в форме буквы "C")
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
-                // Рисуем корпус вагонетки
-                ctx.rect(this.x, this.y, this.width, this.height);
-                ctx.fill();
-
-                // Рисуем колеса
-                ctx.fillStyle = '#000'; // Черные колеса
-                ctx.beginPath();
-                ctx.arc(this.x + 15, this.y + this.height, 10, 0, Math.PI * 2);
-                ctx.arc(this.x + this.width - 15, this.y + this.height, 10, 0, Math.PI * 2);
+                ctx.arc(this.x + 20, this.y + 10, 20, Math.PI / 2, Math.PI * 3 / 2);
+                ctx.lineTo(this.x + 60, this.y + 30);
+                ctx.arc(this.x + 40, this.y + 30, 20, Math.PI * 3 / 2, Math.PI / 2, true);
+                ctx.closePath();
                 ctx.fill();
             }
         }
@@ -333,8 +339,8 @@
 
                 // Проверка столкновений с вагонеткой
                 if (checkCollision(shell, wagon)) {
-                    if (shell.hasBounced) {
-                        // Попадание засчитывается только если ядро отразилось
+                    if (shell.hasBounced && shell.y <= wagon.y + wagon.height / 2) {
+                        // Попадание засчитывается только если ядро отразилось и попало в верхнюю часть вагонетки
                         targetsHit++;
                         hitSound.play();
                         console.log(`Hit! Targets Hit: ${targetsHit}`);
@@ -510,6 +516,8 @@
                 cannon.x = canvas.width / 2 - cannon.width / 2;
                 cannon.y = canvas.height - cannon.height - 10;
                 wagon.x = canvas.width / 2 - wagon.width / 2;
+                wagon.ropeY = 80; // Обновить позицию веревки, если нужно
+                wagon.y = 100; // Обновить позицию ковша
             }
         }
 
