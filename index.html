@@ -104,11 +104,67 @@
         const scoreText = document.getElementById('score');
         const shootButton = document.getElementById('shootButton');
 
+        let clouds = [];
         let cannon, wagon, shell = null;
         let shotsLeft = 20;
         let targetsHit = 0;
         let timer = 90; // Таймер на 90 секунд
         let beams = [];
+        let timerInterval;
+
+        function createClouds() {
+            clouds = [];
+            for (let i = 0; i < 5; i++) {
+                let cloud = {
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * 100,
+                    size: Math.random() * 40 + 30,
+                    speed: Math.random() * 0.5 + 0.2
+                };
+                clouds.push(cloud);
+            }
+        }
+
+        function drawClouds() {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)"; // Полупрозрачные облака
+            clouds.forEach(cloud => {
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function updateClouds() {
+            clouds.forEach(cloud => {
+                cloud.x -= cloud.speed;
+                if (cloud.x < -cloud.size) {
+                    cloud.x = canvas.width + cloud.size;
+                    cloud.y = Math.random() * 100;
+                    cloud.size = Math.random() * 40 + 30;
+                    cloud.speed = Math.random() * 0.5 + 0.2;
+                }
+            });
+        }
+
+        function drawMountains() {
+            ctx.fillStyle = 'rgba(139, 125, 107, 0.3)'; // Полупрозрачные горы
+            // Первая гора
+            ctx.beginPath();
+            ctx.moveTo(50, canvas.height * 0.7);
+            ctx.lineTo(canvas.width * 0.25, canvas.height * 0.4);
+            ctx.lineTo(canvas.width * 0.5, canvas.height * 0.7);
+            ctx.closePath();
+            ctx.fill();
+
+            // Вторая гора с белой шапкой
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // Белая вершина
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.75, canvas.height * 0.7);
+            ctx.lineTo(canvas.width, canvas.height * 0.5);
+            ctx.lineTo(canvas.width, canvas.height * 0.7);
+            ctx.closePath();
+            ctx.fill();
+        }
 
         // Класс для пушки (танк)
         class Cannon {
@@ -142,11 +198,11 @@
                 this.widthTop = 100; // Верхняя ширина ведра
                 this.widthBottom = 60; // Нижняя ширина ведра
                 this.height = 50; // Высота ведра
-                this.ropeY = 50; // Положение веревки
+                this.ropeY = canvas.height / 2; // Веревка опущена к середине экрана
                 this.speed = 150; // Скорость движения ведра, независимая от пушки
                 this.direction = -1; // Движение в другую сторону
                 this.x = canvas.width / 2 - this.widthTop / 2;
-                this.y = this.ropeY; // Ведро теперь вплотную к веревке
+                this.y = this.ropeY + 15; // Ведро немного ниже веревки
             }
 
             update(delta) {
@@ -165,6 +221,14 @@
                 ctx.lineTo(canvas.width, this.ropeY);
                 ctx.stroke();
 
+                // Крюк
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.widthTop / 2, this.ropeY); // Крюк по центру
+                ctx.lineTo(this.x + this.widthTop / 2, this.y); // Свисает к ведру
+                ctx.stroke();
+
                 // Ведро (трапеция)
                 ctx.fillStyle = '#000000';
                 ctx.beginPath();
@@ -177,7 +241,7 @@
             }
         }
 
-        // Класс для снаряда (движется строго вверх и отражается от балок)
+        // Класс для снаряда (движется строго вверх и отражается только от балок)
         class Shell {
             constructor(x, y, vy) {
                 this.radius = 10;
@@ -190,23 +254,18 @@
             update(delta) {
                 this.y += this.vy * delta;
 
-                // Если снаряд выходит за экран сверху, он возвращается обратно (отражение)
-                if (this.y - this.radius <= 0) {
-                    this.vy *= -1; // Отражение по вертикали
+                // Если снаряд не попал в балки и вылетел за экран - исчезает
+                if (this.y < 0) {
+                    this.active = false;
                 }
 
-                // Проверка столкновения с балками (только если уже отразился от верхней границы)
+                // Проверка столкновения с балками
                 beams.forEach(beam => {
                     if (this.y - this.radius <= beam.y + beam.height && this.y - this.radius >= beam.y &&
                         this.x >= beam.x && this.x <= beam.x + beam.width) {
                         this.vy *= -1; // Отражение от балки
                     }
                 });
-
-                // Если мяч выходит за нижний предел, он деактивируется (можно стрелять заново)
-                if (this.y - this.radius > canvas.height) {
-                    this.active = false;
-                }
             }
 
             draw() {
@@ -232,7 +291,7 @@
             }
         }
 
-        // Функция для стрельбы (без гравитации, отражение от балок)
+        // Функция для стрельбы (без гравитации, только отражение от балок)
         function shoot() {
             if (shotsLeft > 0 && !shell) {
                 const shellX = cannon.x + cannon.width / 2;
@@ -247,23 +306,40 @@
         // Обновление UI
         function updateUI() {
             shotsText.textContent = `Выстрелов: ${shotsLeft}`;
+            timerText.textContent = `Время: ${Math.ceil(timer)}`;
         }
 
         // Инициализация игры
         function init() {
             resizeCanvas();
+            createClouds();
             cannon = new Cannon();
             wagon = new Wagon();
             beams = [
                 new Beam(50, 20, 200, 10), // Первая балка (у верхней границы)
                 new Beam(canvas.width - 250, 20, 200, 10) // Вторая балка (у верхней границы)
             ];
+            timerInterval = setInterval(() => {
+                if (timer > 0) {
+                    timer--;
+                    updateUI();
+                } else {
+                    clearInterval(timerInterval);
+                    endGame();
+                }
+            }, 1000); // Таймер уменьшается каждую секунду
             gameLoop();
+        }
+
+        // Завершение игры
+        function endGame() {
+            console.log('Игра окончена');
         }
 
         // Игровой цикл
         function gameLoop() {
             const delta = 1 / 60;
+            updateClouds();
             cannon.update(delta);
             wagon.update(delta);
             if (shell) {
@@ -279,6 +355,8 @@
         // Рисование объектов
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawMountains(); // Рисуем горы
+            drawClouds(); // Рисуем облака
             cannon.draw();
             wagon.draw();
             beams.forEach(beam => beam.draw());
