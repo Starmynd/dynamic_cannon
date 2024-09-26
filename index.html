@@ -241,11 +241,29 @@
                 this.vx = vx;
                 this.vy = vy;
                 this.active = true;
+                this.bounced = false; // Флаг, указывающий, отскочило ли ядро
             }
 
             update(delta) {
                 this.x += this.vx * delta;
                 this.y += this.vy * delta;
+
+                // Проверка столкновения с балками
+                if (this.y - this.radius <= 100 && !this.bounced) {
+                    if ((this.x > 50 && this.x < 250) || (this.x > canvas.width - 250 && this.x < canvas.width - 50)) {
+                        this.vy *= -1; // Отражение по вертикали
+                        this.bounced = true; // Помечаем, что ядро отскочило от балки
+                    }
+                }
+
+                // Проверка отражения от нижней части ведра
+                if (this.y + this.radius >= wagon.y && this.x >= wagon.x && this.x <= wagon.x + wagon.width) {
+                    this.vy *= -1; // Отражение ядра
+                    if (this.bounced && this.y <= wagon.y + wagon.height / 2) {
+                        targetsHit++; // Увеличиваем счет только если ядро отскочило от балки
+                        shell.active = false;
+                    }
+                }
 
                 // Проверка выхода за границы
                 if (this.y > canvas.height) {
@@ -266,12 +284,36 @@
             if (shotsLeft > 0 && !shell) {
                 const shellX = cannon.x + cannon.width / 2;
                 const shellY = cannon.y;
-                const velocityX = 0; // Вертикальная стрельба
+                const velocityX = cannon.direction * cannon.speed * 0.2; // Инерция от движения танка
                 const velocityY = -500; // Скорость вверх
                 shell = new Shell(shellX, shellY, velocityX, velocityY);
                 shotsLeft--;
+                updateUI();
             }
         }
+
+        // Обновление UI
+        function updateUI() {
+            shotsText.textContent = `Выстрелов: ${shotsLeft}`;
+            scoreText.textContent = `Забито: ${targetsHit}/10`;
+        }
+
+        // Класс для балок
+        class Beam {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+            }
+
+            draw() {
+                ctx.fillStyle = '#8B4513'; // Коричневый цвет для балок
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        let beams = [];
 
         // Инициализация игры
         function init() {
@@ -279,6 +321,10 @@
             createClouds();
             cannon = new Cannon();
             wagon = new Wagon();
+            beams = [
+                new Beam(50, 100, 200, 10), // Первая балка
+                new Beam(canvas.width - 250, 100, 200, 10) // Вторая балка
+            ];
             gameLoop();
         }
 
@@ -304,6 +350,7 @@
             drawClouds();
             cannon.draw();
             wagon.draw();
+            beams.forEach(beam => beam.draw());
             if (shell) shell.draw();
         }
 
