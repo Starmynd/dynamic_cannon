@@ -5,13 +5,33 @@
     <title>Dynamic Cannon</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        /* [Ваши существующие стили остаются без изменений] */
-        /* Здесь будут ваши стили CSS */
+        /* Existing styles remain unchanged */
+
+        /* ... [Your existing CSS styles here] ... */
+
+        /* Loading Screen Styles */
+        #loadingMessage {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            z-index: 5;
+        }
     </style>
 </head>
 <body>
-    <!-- Элемент Луны -->
+    <!-- Moon Element -->
     <div id="moon"></div>
+
+    <!-- Loading Screen -->
+    <div id="loadingMessage">Loading... Please wait.</div>
 
     <div id="gameContainer">
         <div id="gameField">
@@ -24,7 +44,7 @@
             <div class="infoRow" id="score">Score: 0/10</div>
             <button id="shootButton">Shoot</button>
         </div>
-        <div id="roundMessage">Round 2</div> <!-- Сообщение о новом раунде -->
+        <div id="roundMessage">Round 2</div> <!-- Round message -->
     </div>
 
     <script>
@@ -37,6 +57,7 @@
         const scoreText = document.getElementById('score');
         const shootButton = document.getElementById('shootButton');
         const roundMessage = document.getElementById('roundMessage');
+        const loadingMessage = document.getElementById('loadingMessage');
 
         let clouds = [];
         let cannon, wagon, shell = null;
@@ -47,10 +68,10 @@
         let beams = [];
         let timerInterval;
 
-        // Флаг для инициализации аудио после взаимодействия пользователя
+        // Flag to initialize audio after user interaction
         let audioInitialized = false;
 
-        // Аудио объекты с доступными URL с сайта Pixabay
+        // Audio objects with accessible URLs from Pixabay
         const backgroundMusic = new Audio('https://cdn.pixabay.com/download/audio/2022/07/28/audio_58a18c2f34.mp3?filename=ambient-background-music-amp-110010.mp3');
         backgroundMusic.loop = true;
         backgroundMusic.volume = 0.2;
@@ -58,6 +79,39 @@
         const shootSound = new Audio('https://cdn.pixabay.com/download/audio/2021/08/04/audio_a436e38d06.mp3?filename=cannon-blast-6143.mp3');
         const ricochetSound = new Audio('https://cdn.pixabay.com/download/audio/2021/08/04/audio_7d5fba0e9d.mp3?filename=ricochet-5787.mp3');
         const hitSound = new Audio('https://cdn.pixabay.com/download/audio/2022/05/24/audio_96f3c14b0e.mp3?filename=snare-drum-hit-112192.mp3');
+
+        // Array of all audio files to preload
+        const audioFiles = [backgroundMusic, shootSound, ricochetSound, hitSound];
+
+        let audioLoadedCount = 0;
+
+        function preloadAudio() {
+            audioFiles.forEach(audio => {
+                audio.addEventListener('canplaythrough', onAudioLoaded, { once: true });
+                audio.addEventListener('error', onAudioError, { once: true });
+                // Start loading the audio
+                audio.load();
+            });
+        }
+
+        function onAudioLoaded() {
+            audioLoadedCount++;
+            if (audioLoadedCount === audioFiles.length) {
+                // All audio files are loaded
+                loadingMessage.style.display = 'none';
+                init();
+            }
+        }
+
+        function onAudioError(e) {
+            console.error('Error loading audio:', e);
+            audioLoadedCount++;
+            if (audioLoadedCount === audioFiles.length) {
+                // Proceed even if some audio files failed to load
+                loadingMessage.style.display = 'none';
+                init();
+            }
+        }
 
         function createClouds() {
             clouds = [];
@@ -94,7 +148,52 @@
         }
 
         function drawMountains() {
-            // [Ваш существующий код для отрисовки гор]
+            // Your existing code for drawing mountains
+            // Foreground mountains
+            ctx.fillStyle = '#654321';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            ctx.lineTo(canvas.width * 0.15, canvas.height * 0.7);
+            ctx.lineTo(canvas.width * 0.3, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.4, canvas.height);
+            ctx.lineTo(canvas.width * 0.55, canvas.height * 0.6);
+            ctx.lineTo(canvas.width * 0.7, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.8, canvas.height);
+            ctx.lineTo(canvas.width * 0.9, canvas.height * 0.65);
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            // Snow caps
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.15, canvas.height * 0.7);
+            ctx.lineTo(canvas.width * 0.13, canvas.height * 0.75);
+            ctx.lineTo(canvas.width * 0.17, canvas.height * 0.75);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.55, canvas.height * 0.6);
+            ctx.lineTo(canvas.width * 0.53, canvas.height * 0.65);
+            ctx.lineTo(canvas.width * 0.57, canvas.height * 0.65);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.9, canvas.height * 0.65);
+            ctx.lineTo(canvas.width * 0.88, canvas.height * 0.7);
+            ctx.lineTo(canvas.width * 0.92, canvas.height * 0.7);
+            ctx.closePath();
+            ctx.fill();
         }
 
         class Cannon {
@@ -115,7 +214,25 @@
             }
 
             draw() {
-                // [Ваш существующий код для отрисовки пушки]
+                // Cannon base
+                ctx.fillStyle = "#2F4F4F";
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                // Cannon barrel
+                ctx.fillStyle = "#696969";
+                ctx.fillRect(this.x + this.width / 4, this.y - 20, this.width / 2, 20);
+
+                // Cannon tip
+                ctx.fillStyle = "#000000";
+                ctx.fillRect(this.x + this.width / 2 - 5, this.y - 40, 10, 30);
+
+                // Wheels
+                ctx.fillStyle = "#3E2723";
+                for (let i = 0; i < 4; i++) {
+                    ctx.beginPath();
+                    ctx.arc(this.x + 15 * i + 10, this.y + this.height + 5, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
 
             increaseSpeed() {
@@ -142,7 +259,27 @@
             }
 
             draw() {
-                // [Ваш существующий код для отрисовки ведра]
+                // Rope
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, this.ropeY);
+                ctx.lineTo(canvas.width, this.ropeY);
+                ctx.stroke();
+
+                // Rope to wagon
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.ropeY);
+                ctx.lineTo(this.x + this.width / 2, this.y);
+                ctx.stroke();
+
+                // Wagon (Bucket)
+                ctx.fillStyle = '#D2691E';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                // Wagon details
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(this.x, this.y + this.height - 10, this.width, 10);
             }
 
             increaseSpeed() {
@@ -175,11 +312,11 @@
                         this.vy = -this.vy;
                         this.bounced = true;
                         this.y = beam.y + beam.height + this.radius;
-                        ricochetSound.play().catch(error => console.log(error)); // Проигрываем звук рикошета
+                        ricochetSound.play().catch(error => console.log(error)); // Play ricochet sound
                     }
                 });
 
-                // Столкновение с ведром
+                // Collision with wagon
                 if (
                     this.y + this.radius >= wagon.y &&
                     this.y - this.radius <= wagon.y + wagon.height &&
@@ -190,7 +327,7 @@
                         targetsHit++;
                         this.active = false;
                         updateUI();
-                        hitSound.play().catch(error => console.log(error)); // Проигрываем звук попадания
+                        hitSound.play().catch(error => console.log(error)); // Play hit sound
                         if (targetsHit >= 10) {
                             endRound();
                         }
@@ -224,9 +361,9 @@
 
         function shoot() {
             if (shotsLeft > 0 && !shell) {
-                // Инициализируем аудио при первом взаимодействии
+                // Initialize audio on first interaction
                 if (!audioInitialized) {
-                    backgroundMusic.play().catch(error => console.log(error)); // Проигрываем фоновую музыку
+                    backgroundMusic.play().catch(error => console.log(error)); // Play background music
                     audioInitialized = true;
                 }
 
@@ -236,7 +373,7 @@
                 shell = new Shell(shellX, shellY, velocityY);
                 shotsLeft--;
                 updateUI();
-                shootSound.play().catch(error => console.log(error)); // Проигрываем звук выстрела
+                shootSound.play().catch(error => console.log(error)); // Play shoot sound
                 if (shotsLeft < 10 - targetsHit) {
                     endGame("Out of ammo! Try again.", true);
                 }
@@ -360,7 +497,7 @@
 
         window.onload = function() {
             resizeCanvas();
-            init();
+            preloadAudio(); // Start preloading audio files
         };
 
         shootButton.addEventListener('click', function() {
