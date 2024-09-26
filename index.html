@@ -130,6 +130,11 @@
         let beams = [];
         let timerInterval;
 
+        // Добавляем фоновую музыку
+        const backgroundMusic = new Audio('https://www.bensound.com/bensound-music/bensound-creativeminds.mp3');
+        backgroundMusic.loop = true; // Зацикливаем
+        backgroundMusic.play();
+
         function createClouds() {
             clouds = [];
             for (let i = 0; i < 5; i++) {
@@ -165,21 +170,39 @@
         }
 
         function drawMountains() {
-            ctx.fillStyle = 'rgba(139, 125, 107, 0.3)'; // Полупрозрачные горы
+            // Коричневые горы, их основания внизу
+            ctx.fillStyle = 'rgba(139, 69, 19, 1)'; // Коричневый цвет для основания гор
             // Первая гора
             ctx.beginPath();
-            ctx.moveTo(50, canvas.height * 0.7);
-            ctx.lineTo(canvas.width * 0.25, canvas.height * 0.4);
-            ctx.lineTo(canvas.width * 0.5, canvas.height * 0.7);
+            ctx.moveTo(50, canvas.height); // Горы вплотную к нижней границе
+            ctx.lineTo(canvas.width * 0.25, canvas.height * 0.4); // Пик
+            ctx.lineTo(canvas.width * 0.5, canvas.height); // Правый край
             ctx.closePath();
             ctx.fill();
 
-            // Вторая гора с белой шапкой
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // Белая вершина
+            // Вторая гора
             ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.75, canvas.height * 0.7);
+            ctx.moveTo(canvas.width * 0.75, canvas.height);
             ctx.lineTo(canvas.width, canvas.height * 0.5);
-            ctx.lineTo(canvas.width, canvas.height * 0.7);
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            // Белые верхушки гор (снег)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; // Полупрозрачный белый для снега
+            // Верхушка первой горы
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.25, canvas.height * 0.4); // Пик
+            ctx.lineTo(canvas.width * 0.22, canvas.height * 0.5); // Левый край снега
+            ctx.lineTo(canvas.width * 0.28, canvas.height * 0.5); // Правый край снега
+            ctx.closePath();
+            ctx.fill();
+
+            // Верхушка второй горы
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.9, canvas.height * 0.5); // Пик
+            ctx.lineTo(canvas.width * 0.88, canvas.height * 0.55);
+            ctx.lineTo(canvas.width * 0.92, canvas.height * 0.55);
             ctx.closePath();
             ctx.fill();
         }
@@ -342,6 +365,11 @@
                 shell = new Shell(shellX, shellY, velocityY);
                 shotsLeft--;
                 updateUI();
+
+                // Проверка: достаточно ли выстрелов для победы
+                if (shotsLeft < 10 - targetsHit) {
+                    endGame("Out of balls! Try again!");
+                }
             }
         }
 
@@ -376,8 +404,7 @@
                 wagon.increaseSpeed();
                 startTimer();
             } else {
-                roundMessage.textContent = "Congrats! You are the winner of Dynamic Cannon!";
-                roundMessage.style.display = 'block';
+                endGame("Congrats! You are the winner of Dynamic Cannon!");
             }
         }
 
@@ -389,9 +416,16 @@
                     updateUI();
                 } else {
                     clearInterval(timerInterval);
-                    endGame();
+                    endGame("Time's up! Try again!");
                 }
             }, 1000);
+        }
+
+        // Завершение игры с сообщением
+        function endGame(message) {
+            clearInterval(timerInterval);
+            roundMessage.textContent = message;
+            roundMessage.style.display = 'block';
         }
 
         // Инициализация игры
@@ -406,11 +440,6 @@
             ];
             startTimer();
             gameLoop();
-        }
-
-        // Завершение игры
-        function endGame() {
-            console.log('Игра окончена');
         }
 
         // Игровой цикл
