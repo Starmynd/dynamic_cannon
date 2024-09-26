@@ -1,20 +1,25 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Dynamic Cannon</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        /* Ваши стили остаются без изменений */
+        /* Reset and Base Styles */
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             padding: 0;
-            background: #6dbbe3;
+            background: linear-gradient(to bottom, #87ceeb, #1e90ff);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
         }
 
         #gameContainer {
@@ -24,20 +29,21 @@
             max-height: 1280px;
             background: #f0f0f0;
             position: relative;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
             overflow: hidden;
             display: flex;
             flex-direction: column;
             align-items: center;
+            border: 10px solid #333;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
         }
 
         #gameField {
             width: 100%;
             height: 80%;
-            background: #87cefa;
+            background: linear-gradient(to top, #98fb98, #2e8b57);
             position: relative;
-            border: 5px solid #000;
-            box-sizing: border-box;
+            border-bottom: 5px solid #000;
             overflow: hidden;
         }
 
@@ -51,32 +57,40 @@
         #ui {
             width: 100%;
             height: 20%;
-            background: rgba(51, 51, 51, 0.8);
-            color: white;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
             padding: 10px;
-            box-sizing: border-box;
             text-align: center;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            border-top: 5px solid #000;
         }
 
         .infoRow {
             margin: 5px 0;
-            font-size: 18px;
+            font-size: 20px;
+            text-shadow: 1px 1px 2px #000;
         }
 
         #shootButton {
             width: 100%;
             padding: 15px;
-            font-size: 18px;
+            font-size: 20px;
             border: none;
-            background: #4CAF50;
+            background: linear-gradient(to right, #4caf50, #2e7d32);
             color: white;
             border-radius: 5px;
             cursor: pointer;
             margin-top: 10px;
+            box-shadow: 0 5px #1b5e20;
+            transition: all 0.1s ease-in-out;
+        }
+
+        #shootButton:active {
+            box-shadow: 0 2px #1b5e20;
+            transform: translateY(3px);
         }
 
         #roundMessage {
@@ -84,14 +98,21 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             color: white;
             padding: 30px;
-            font-size: 24px;
+            font-size: 28px;
             text-align: center;
             display: none;
             z-index: 3;
             border-radius: 10px;
+            text-shadow: 2px 2px 4px #000;
+            animation: fadeInOut 2s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
         }
     </style>
 </head>
@@ -101,13 +122,13 @@
             <canvas id="gameCanvas"></canvas>
         </div>
         <div id="ui">
-            <div class="infoRow" id="roundInfo">Раунд: 1</div>
-            <div class="infoRow" id="timer">Время: 90</div>
-            <div class="infoRow" id="shots">Выстрелов: 20</div>
-            <div class="infoRow" id="score">Забито: 0/10</div>
-            <button id="shootButton">Выстрелить</button>
+            <div class="infoRow" id="roundInfo">Round: 1</div>
+            <div class="infoRow" id="timer">Time: 90</div>
+            <div class="infoRow" id="shots">Shots Left: 20</div>
+            <div class="infoRow" id="score">Score: 0/10</div>
+            <button id="shootButton">Shoot</button>
         </div>
-        <div id="roundMessage">Round 2</div> <!-- Сообщение о новом раунде -->
+        <div id="roundMessage">Round 2</div> <!-- Round message -->
     </div>
 
     <script>
@@ -130,17 +151,17 @@
         let beams = [];
         let timerInterval;
 
-        // Флаг для инициализации аудио после взаимодействия пользователя
+        // Flag to initialize audio after user interaction
         let audioInitialized = false;
 
-        // Добавляем аудио объекты с ссылками на звуки из Pixabay.com
-        const backgroundMusic = new Audio('https://cdn.pixabay.com/audio/2021/12/07/audio_d2d3ba5b72.mp3');
+        // Audio objects with accessible URLs
+        const backgroundMusic = new Audio('https://cdn.pixabay.com/download/audio/2021/12/07/audio_d2d3ba5b72.mp3?filename=adventure-106143.mp3');
         backgroundMusic.loop = true;
         backgroundMusic.volume = 0.2;
 
-        const shootSound = new Audio('https://cdn.pixabay.com/audio/2021/08/09/audio_3d6e8e459c.mp3');
-        const ricochetSound = new Audio('https://cdn.pixabay.com/audio/2021/08/04/audio_7d5fba0e9d.mp3');
-        const hitSound = new Audio('https://cdn.pixabay.com/audio/2022/02/24/audio_5f640cb3e8.mp3');
+        const shootSound = new Audio('https://cdn.pixabay.com/download/audio/2021/08/09/audio_3d6e8e459c.mp3?filename=gun-shot-147224.mp3');
+        const ricochetSound = new Audio('https://cdn.pixabay.com/download/audio/2021/08/04/audio_7d5fba0e9d.mp3?filename=ricochet-5787.mp3');
+        const hitSound = new Audio('https://cdn.pixabay.com/download/audio/2022/02/24/audio_5f640cb3e8.mp3?filename=success-1-6297.mp3');
 
         function createClouds() {
             clouds = [];
@@ -156,7 +177,7 @@
         }
 
         function drawClouds() {
-            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
             clouds.forEach(cloud => {
                 ctx.beginPath();
                 ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
@@ -177,33 +198,49 @@
         }
 
         function drawMountains() {
-            ctx.fillStyle = 'rgba(139, 69, 19, 1)';
+            // Foreground mountains
+            ctx.fillStyle = '#654321';
             ctx.beginPath();
-            ctx.moveTo(50, canvas.height);
-            ctx.lineTo(canvas.width * 0.25, canvas.height * 0.4);
-            ctx.lineTo(canvas.width * 0.5, canvas.height);
+            ctx.moveTo(0, canvas.height);
+            ctx.lineTo(canvas.width * 0.15, canvas.height * 0.7);
+            ctx.lineTo(canvas.width * 0.3, canvas.height);
             ctx.closePath();
             ctx.fill();
 
             ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.75, canvas.height);
-            ctx.lineTo(canvas.width, canvas.height * 0.5);
+            ctx.moveTo(canvas.width * 0.4, canvas.height);
+            ctx.lineTo(canvas.width * 0.55, canvas.height * 0.6);
+            ctx.lineTo(canvas.width * 0.7, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.8, canvas.height);
+            ctx.lineTo(canvas.width * 0.9, canvas.height * 0.65);
             ctx.lineTo(canvas.width, canvas.height);
             ctx.closePath();
             ctx.fill();
 
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            // Snow caps
+            ctx.fillStyle = '#FFFFFF';
             ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.25, canvas.height * 0.4);
-            ctx.lineTo(canvas.width * 0.22, canvas.height * 0.5);
-            ctx.lineTo(canvas.width * 0.28, canvas.height * 0.5);
+            ctx.moveTo(canvas.width * 0.15, canvas.height * 0.7);
+            ctx.lineTo(canvas.width * 0.13, canvas.height * 0.75);
+            ctx.lineTo(canvas.width * 0.17, canvas.height * 0.75);
             ctx.closePath();
             ctx.fill();
 
             ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.9, canvas.height * 0.5);
-            ctx.lineTo(canvas.width * 0.88, canvas.height * 0.55);
-            ctx.lineTo(canvas.width * 0.92, canvas.height * 0.55);
+            ctx.moveTo(canvas.width * 0.55, canvas.height * 0.6);
+            ctx.lineTo(canvas.width * 0.53, canvas.height * 0.65);
+            ctx.lineTo(canvas.width * 0.57, canvas.height * 0.65);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.9, canvas.height * 0.65);
+            ctx.lineTo(canvas.width * 0.88, canvas.height * 0.7);
+            ctx.lineTo(canvas.width * 0.92, canvas.height * 0.7);
             ctx.closePath();
             ctx.fill();
         }
@@ -226,13 +263,20 @@
             }
 
             draw() {
-                ctx.fillStyle = "#1E3A8A";
+                // Cannon base
+                ctx.fillStyle = "#2F4F4F";
                 ctx.fillRect(this.x, this.y, this.width, this.height);
-                ctx.fillStyle = "#3949AB";
+
+                // Cannon barrel
+                ctx.fillStyle = "#696969";
                 ctx.fillRect(this.x + this.width / 4, this.y - 20, this.width / 2, 20);
+
+                // Cannon tip
                 ctx.fillStyle = "#000000";
                 ctx.fillRect(this.x + this.width / 2 - 5, this.y - 40, 10, 30);
-                ctx.fillStyle = "#212121";
+
+                // Wheels
+                ctx.fillStyle = "#3E2723";
                 for (let i = 0; i < 4; i++) {
                     ctx.beginPath();
                     ctx.arc(this.x + 15 * i + 10, this.y + this.height + 5, 8, 0, Math.PI * 2);
@@ -264,6 +308,7 @@
             }
 
             draw() {
+                // Rope
                 ctx.strokeStyle = '#8B4513';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
@@ -271,16 +316,27 @@
                 ctx.lineTo(canvas.width, this.ropeY);
                 ctx.stroke();
 
-                ctx.strokeStyle = '#8B4513';
-                ctx.lineWidth = 2;
+                // Rope to wagon
                 ctx.beginPath();
                 ctx.moveTo(this.x + this.width / 2, this.ropeY);
                 ctx.lineTo(this.x + this.width / 2, this.y);
                 ctx.stroke();
 
-                ctx.fillStyle = '#FF69B4';
+                // Wagon
+                ctx.fillStyle = '#D2691E';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                // Wagon details
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(this.x, this.y + this.height - 10, this.width, 10);
+
+                // Wheels
+                ctx.fillStyle = '#3E2723';
                 ctx.beginPath();
-                ctx.rect(this.x, this.y, this.width, this.height);
+                ctx.arc(this.x + 20, this.y + this.height + 10, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.x + this.width - 20, this.y + this.height + 10, 10, 0, Math.PI * 2);
                 ctx.fill();
             }
 
@@ -314,11 +370,11 @@
                         this.vy = -this.vy;
                         this.bounced = true;
                         this.y = beam.y + beam.height + this.radius;
-                        ricochetSound.play(); // Проигрываем звук рикошета
+                        ricochetSound.play().catch(error => console.log(error)); // Play ricochet sound
                     }
                 });
 
-                // Проверяем на столкновение с ведром
+                // Collision with wagon
                 if (
                     this.y + this.radius >= wagon.y &&
                     this.y - this.radius <= wagon.y + wagon.height &&
@@ -329,7 +385,7 @@
                         targetsHit++;
                         this.active = false;
                         updateUI();
-                        hitSound.play(); // Проигрываем звук попадания
+                        hitSound.play().catch(error => console.log(error)); // Play hit sound
                         if (targetsHit >= 10) {
                             endRound();
                         }
@@ -363,9 +419,9 @@
 
         function shoot() {
             if (shotsLeft > 0 && !shell) {
-                // Инициализируем аудио при первом выстреле
+                // Initialize audio on first interaction
                 if (!audioInitialized) {
-                    backgroundMusic.play(); // Проигрываем фоновую музыку
+                    backgroundMusic.play().catch(error => console.log(error)); // Play background music
                     audioInitialized = true;
                 }
 
@@ -375,23 +431,23 @@
                 shell = new Shell(shellX, shellY, velocityY);
                 shotsLeft--;
                 updateUI();
-                shootSound.play(); // Проигрываем звук выстрела
+                shootSound.play().catch(error => console.log(error)); // Play shoot sound
                 if (shotsLeft < 10 - targetsHit) {
-                    endGame("Патроны закончились! Попробуйте снова.", true);
+                    endGame("Out of ammo! Try again.", true);
                 }
             }
         }
 
         function updateUI() {
-            shotsText.textContent = `Выстрелов: ${shotsLeft}`;
-            scoreText.textContent = `Забито: ${targetsHit}/10`;
-            timerText.textContent = `Время: ${Math.ceil(timer)}`;
-            roundInfo.textContent = `Раунд: ${round}`;
+            shotsText.textContent = `Shots Left: ${shotsLeft}`;
+            scoreText.textContent = `Score: ${targetsHit}/10`;
+            timerText.textContent = `Time: ${Math.ceil(timer)}`;
+            roundInfo.textContent = `Round: ${round}`;
         }
 
         function endRound() {
             clearInterval(timerInterval);
-            roundMessage.textContent = `Раунд ${round + 1}`;
+            roundMessage.textContent = `Round ${round + 1}`;
             roundMessage.style.display = 'block';
 
             setTimeout(() => {
@@ -410,7 +466,7 @@
                 wagon.increaseSpeed();
                 startTimer();
             } else {
-                endGame("Поздравляем! Вы победили в игре Dynamic Cannon!", false);
+                endGame("Congratulations! You won Dynamic Cannon!", false);
             }
         }
 
@@ -421,7 +477,7 @@
                     updateUI();
                 } else {
                     clearInterval(timerInterval);
-                    endGame("Время вышло! Попробуйте снова.", true);
+                    endGame("Time's up! Try again.", true);
                 }
             }, 1000);
         }
@@ -436,7 +492,6 @@
                     resetGame();
                 }, 3000);
             } else {
-                // Останавливаем фоновую музыку при окончании игры
                 backgroundMusic.pause();
                 backgroundMusic.currentTime = 0;
                 audioInitialized = false;
@@ -460,10 +515,9 @@
             cannon = new Cannon();
             wagon = new Wagon();
             beams = [
-                new Beam(50, 20, 200, 10),
-                new Beam(canvas.width - 250, 20, 200, 10)
+                new Beam(50, 150, 200, 10),
+                new Beam(canvas.width - 250, 200, 200, 10)
             ];
-            // backgroundMusic.play(); // Убираем из init()
             startTimer();
             gameLoop();
         }
@@ -487,9 +541,9 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawMountains();
             drawClouds();
-            cannon.draw();
-            wagon.draw();
             beams.forEach(beam => beam.draw());
+            wagon.draw();
+            cannon.draw();
             if (shell) shell.draw();
         }
 
