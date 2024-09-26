@@ -129,11 +129,19 @@
         let round = 1;
         let beams = [];
         let timerInterval;
+        let musicStarted = false; // Для запуска музыки только после первого клика
 
         // Добавляем фоновую музыку
         const backgroundMusic = new Audio('https://www.bensound.com/bensound-music/bensound-creativeminds.mp3');
         backgroundMusic.loop = true; // Зацикливаем
-        backgroundMusic.play().catch(err => console.log('Failed to play background music:', err));
+
+        // Функция для старта музыки при первом клике
+        function startMusic() {
+            if (!musicStarted) {
+                backgroundMusic.play().catch(err => console.log('Failed to play background music:', err));
+                musicStarted = true;
+            }
+        }
 
         function createClouds() {
             clouds = [];
@@ -325,6 +333,8 @@
                         this.x >= beam.x && this.x <= beam.x + beam.width) {
                         this.vy *= -1; // Отражение от балки
                         this.bounced = true; // Мяч отразился от балки
+                        // Коррекция положения мяча после отскока
+                        this.y = beam.y + beam.height + this.radius;
                     }
                 });
 
@@ -375,6 +385,7 @@
                 shell = new Shell(shellX, shellY, velocityY);
                 shotsLeft--;
                 updateUI();
+                startMusic(); // Запускаем музыку при первом выстреле
 
                 // Проверка: достаточно ли выстрелов для победы
                 if (shotsLeft < 10 - targetsHit) {
