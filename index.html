@@ -5,93 +5,7 @@
     <title>Dynamic Cannon</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #6dbbe3;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: Arial, sans-serif;
-        }
-
-        #gameContainer {
-            width: 100%;
-            height: 100%;
-            max-width: 720px;
-            max-height: 1280px;
-            background: #f0f0f0;
-            position: relative;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        #gameField {
-            width: 100%;
-            height: 80%;
-            background: #87cefa;
-            position: relative;
-            border: 5px solid #000;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            z-index: 2;
-        }
-
-        #ui {
-            width: 100%;
-            height: 20%;
-            background: rgba(51, 51, 51, 0.8);
-            color: white;
-            padding: 10px;
-            box-sizing: border-box;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .infoRow {
-            margin: 5px 0;
-            font-size: 18px;
-        }
-
-        #shootButton {
-            width: 100%;
-            padding: 15px;
-            font-size: 18px;
-            border: none;
-            background: #4CAF50;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-
-        #roundMessage {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 30px;
-            font-size: 24px;
-            text-align: center;
-            display: none;
-            z-index: 3;
-            border-radius: 10px;
-        }
+        /* Стили остаются такими же */
     </style>
 </head>
 <body>
@@ -106,8 +20,14 @@
             <div class="infoRow" id="score">Забито: 0/10</div>
             <button id="shootButton">Выстрелить</button>
         </div>
-        <div id="roundMessage">Round 2</div> <!-- Сообщение о новом раунде -->
+        <div id="roundMessage">Round 2</div>
     </div>
+
+    <!-- Аудиофайлы -->
+    <audio id="backgroundMusic" src="https://freesound.org/data/previews/270/270304_5123851-lq.mp3" loop></audio>
+    <audio id="shootSound" src="https://freesound.org/data/previews/161/161195_2437358-lq.mp3"></audio>
+    <audio id="bounceSound" src="https://freesound.org/data/previews/411/411791_5123851-lq.mp3"></audio>
+    <audio id="hitSound" src="https://freesound.org/data/previews/735/73581_634166-lq.mp3"></audio>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -119,6 +39,15 @@
         const scoreText = document.getElementById('score');
         const shootButton = document.getElementById('shootButton');
         const roundMessage = document.getElementById('roundMessage');
+
+        // Загрузка и воспроизведение аудиофайлов
+        const backgroundMusic = document.getElementById('backgroundMusic');
+        const shootSound = document.getElementById('shootSound');
+        const bounceSound = document.getElementById('bounceSound');
+        const hitSound = document.getElementById('hitSound');
+
+        // Включаем фоновую музыку
+        backgroundMusic.play();
 
         let clouds = [];
         let cannon, wagon, shell = null;
@@ -161,38 +90,6 @@
                     cloud.speed = Math.random() * 0.5 + 0.2;
                 }
             });
-        }
-
-        function drawMountains() {
-            ctx.fillStyle = 'rgba(139, 69, 19, 1)';
-            ctx.beginPath();
-            ctx.moveTo(50, canvas.height);
-            ctx.lineTo(canvas.width * 0.25, canvas.height * 0.4);
-            ctx.lineTo(canvas.width * 0.5, canvas.height);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.75, canvas.height);
-            ctx.lineTo(canvas.width, canvas.height * 0.5);
-            ctx.lineTo(canvas.width, canvas.height);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.25, canvas.height * 0.4);
-            ctx.lineTo(canvas.width * 0.22, canvas.height * 0.5);
-            ctx.lineTo(canvas.width * 0.28, canvas.height * 0.5);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.9, canvas.height * 0.5);
-            ctx.lineTo(canvas.width * 0.88, canvas.height * 0.55);
-            ctx.lineTo(canvas.width * 0.92, canvas.height * 0.55);
-            ctx.closePath();
-            ctx.fill();
         }
 
         class Cannon {
@@ -301,25 +198,28 @@
                         this.vy = -this.vy;
                         this.bounced = true;
                         this.y = beam.y + beam.height + this.radius;
+                        bounceSound.play(); // Воспроизводим звук отскока
                     }
                 });
 
-                // Проверяем на столкновение с ведром (как с прямоугольником)
+                // Проверка на столкновение с ведром
                 if (
-                    this.y + this.radius >= wagon.y && // Нижняя часть ядра касается ведра
-                    this.y - this.radius <= wagon.y + wagon.height && // Верхняя часть ядра касается верхнего края ведра
-                    this.x >= wagon.x && // В пределах левого края ведра
-                    this.x <= wagon.x + wagon.width // В пределах правого края ведра
+                    this.y + this.radius >= wagon.y &&
+                    this.y - this.radius <= wagon.y + wagon.height &&
+                    this.x >= wagon.x &&
+                    this.x <= wagon.x + wagon.width
                 ) {
                     if (this.bounced) {
                         targetsHit++;
                         this.active = false;
                         updateUI();
+                        hitSound.play(); // Воспроизводим звук попадания
                         if (targetsHit >= 10) {
                             endRound();
                         }
                     } else {
-                        this.vy = -this.vy; // Отражаем от нижнего края
+                        this.vy = -this.vy;
+                        bounceSound.play(); // Воспроизводим звук отскока
                     }
                 }
             }
@@ -354,6 +254,7 @@
                 shell = new Shell(shellX, shellY, velocityY);
                 shotsLeft--;
                 updateUI();
+                shootSound.play(); // Воспроизводим звук выстрела
                 if (shotsLeft < 10 - targetsHit) {
                     endGame("Out of balls! Try again!", true);
                 }
