@@ -341,6 +341,7 @@
                 // Проверка на попадание в ведро (только если мяч был отражен)
                 if (this.y + this.radius >= wagon.y && this.x >= wagon.x && this.x <= wagon.x + wagon.widthTop) {
                     if (this.bounced) {
+                        // Мяч был отражен и попал в ведро
                         targetsHit++; // Засчитываем очко
                         this.active = false; // Мяч исчезает после попадания
                         updateUI();
@@ -348,6 +349,7 @@
                             endRound();
                         }
                     } else {
+                        // Мяч не был отражен от балки, отскакивает обратно
                         this.vy *= -1; // Отражение от нижней части ведра
                     }
                 }
