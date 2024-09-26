@@ -242,24 +242,22 @@
             }
         }
 
-        // Класс для снаряда (логика автоподачи, как у теннисного мяча)
+        // Класс для снаряда (без инерции, движется строго вверх)
         class Shell {
-            constructor(x, y, vx, vy) {
+            constructor(x, y, vy) {
                 this.radius = 10;
                 this.x = x;
                 this.y = y;
-                this.vx = vx;
                 this.vy = vy;
                 this.active = true;
                 this.bounced = false; // Флаг, указывающий, отскочило ли ядро
             }
 
             update(delta) {
-                this.x += this.vx * delta;
                 this.y += this.vy * delta;
 
                 // Если снаряд выходит за экран, он удаляется
-                if (this.y > canvas.height || this.y < 0 || this.x < 0 || this.x > canvas.width) {
+                if (this.y > canvas.height || this.y < 0) {
                     this.active = false;
                 }
 
@@ -289,14 +287,13 @@
             }
         }
 
-        // Функция для стрельбы (логика автоподачи)
+        // Функция для стрельбы (без инерции, строго вертикально)
         function shoot() {
             if (shotsLeft > 0 && !shell) {
                 const shellX = cannon.x + cannon.width / 2;
                 const shellY = cannon.y;
-                const velocityX = cannon.direction * cannon.speed * 0.5; // Инерция от движения танка
                 const velocityY = -2000; // Увеличенная вертикальная скорость для мощного выстрела вверх
-                shell = new Shell(shellX, shellY, velocityX, velocityY);
+                shell = new Shell(shellX, shellY, velocityY);
                 shotsLeft--;
                 updateUI();
             }
