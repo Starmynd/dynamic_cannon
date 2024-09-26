@@ -5,7 +5,7 @@
     <title>Dynamic Cannon</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        /* Your existing CSS styles */
+        /* CSS remains largely the same */
 
         body {
             margin: 0;
@@ -18,35 +18,6 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
             position: relative;
-        }
-
-        /* Adding stars to the background */
-        body::after {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(2px 2px at 20% 30%, white, transparent),
-                        radial-gradient(1.5px 1.5px at 80% 20%, white, transparent),
-                        radial-gradient(2px 2px at 50% 70%, white, transparent),
-                        radial-gradient(1px 1px at 70% 50%, white, transparent),
-                        radial-gradient(1.5px 1.5px at 30% 80%, white, transparent),
-                        radial-gradient(1px 1px at 90% 60%, white, transparent);
-            background-repeat: repeat;
-            background-size: 100% 100%;
-            z-index: 1;
-        }
-
-        #moon {
-            position: absolute;
-            top: 10%;
-            left: 75%;
-            width: 80px;
-            height: 80px;
-            background: radial-gradient(circle at 30% 30%, #fff, #f0f0f0);
-            border-radius: 50%;
-            z-index: 1;
-            box-shadow: -5px -5px 15px rgba(255, 255, 255, 0.5);
         }
 
         #gameContainer {
@@ -75,6 +46,18 @@
             overflow: hidden;
         }
 
+        #moon {
+            position: absolute;
+            top: 10%;
+            left: 75%;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle at 30% 30%, #fff, #f0f0f0);
+            border-radius: 50%;
+            box-shadow: -5px -5px 15px rgba(255, 255, 255, 0.5);
+            z-index: 1;
+        }
+
         canvas {
             display: block;
             width: 100%;
@@ -99,7 +82,6 @@
         .infoRow {
             margin: 5px 0;
             font-size: 20px;
-            text-shadow: 1px 1px 2px #000;
         }
 
         #shootButton {
@@ -112,35 +94,6 @@
             border-radius: 5px;
             cursor: pointer;
             margin-top: 10px;
-            box-shadow: 0 5px #1b5e20;
-            transition: all 0.1s ease-in-out;
-        }
-
-        #shootButton:active {
-            box-shadow: 0 2px #1b5e20;
-            transform: translateY(3px);
-        }
-
-        #roundMessage {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 30px;
-            font-size: 28px;
-            text-align: center;
-            display: none;
-            z-index: 3;
-            border-radius: 10px;
-            text-shadow: 2px 2px 4px #000;
-            animation: fadeInOut 2s ease-in-out;
-        }
-
-        @keyframes fadeInOut {
-            0%, 100% { opacity: 0; }
-            50% { opacity: 1; }
         }
 
         /* Loading Screen Styles */
@@ -161,10 +114,6 @@
     </style>
 </head>
 <body>
-    <!-- Moon Element -->
-    <div id="moon"></div>
-
-    <!-- Loading Screen -->
     <div id="loadingScreen">Loading... Please wait.</div>
 
     <div id="gameContainer" style="display: none;">
@@ -178,7 +127,7 @@
             <div class="infoRow" id="score">Score: 0/10</div>
             <button id="shootButton">Shoot</button>
         </div>
-        <div id="roundMessage">Round 2</div> <!-- Round message -->
+        <div id="moon"></div> <!-- Add moon inside game container -->
     </div>
 
     <script>
@@ -190,7 +139,6 @@
         const shotsText = document.getElementById('shots');
         const scoreText = document.getElementById('score');
         const shootButton = document.getElementById('shootButton');
-        const roundMessage = document.getElementById('roundMessage');
         const loadingScreen = document.getElementById('loadingScreen');
         const gameContainer = document.getElementById('gameContainer');
 
@@ -202,11 +150,9 @@
         let round = 1;
         let beams = [];
         let timerInterval;
-
-        // Flag to initialize audio after user interaction
         let audioInitialized = false;
 
-        // Audio objects with accessible URLs from Pixabay
+        // Audio objects
         const backgroundMusic = new Audio('https://cdn.pixabay.com/download/audio/2022/03/15/audio_c2dc92954e.mp3?filename=relaxing-music-11784.mp3');
         backgroundMusic.loop = true;
         backgroundMusic.volume = 0.2;
@@ -215,7 +161,6 @@
         const ricochetSound = new Audio('https://cdn.pixabay.com/download/audio/2021/08/04/audio_7d5fba0e9d.mp3?filename=ricochet-5787.mp3');
         const hitSound = new Audio('https://cdn.pixabay.com/download/audio/2021/10/11/audio_b6ecdd5d8c.mp3?filename=snare-drum-hit-143989.mp3');
 
-        // Array of all audio files to preload
         const audioFiles = [backgroundMusic, shootSound, ricochetSound, hitSound];
 
         function preloadAudio() {
@@ -223,24 +168,33 @@
                 return new Promise((resolve, reject) => {
                     audio.addEventListener('canplaythrough', resolve, { once: true });
                     audio.addEventListener('error', reject, { once: true });
-                    // Start loading the audio
                     audio.load();
                 });
             });
 
             Promise.all(promises)
                 .then(() => {
-                    // All audio files are loaded
                     loadingScreen.style.display = 'none';
                     gameContainer.style.display = 'flex';
-                    // Do not start the game yet; wait for user interaction
                 })
                 .catch((error) => {
                     console.error('Error loading audio:', error);
-                    // Proceed even if some audio files failed to load
                     loadingScreen.style.display = 'none';
                     gameContainer.style.display = 'flex';
                 });
+        }
+
+        function init() {
+            createClouds();
+            cannon = new Cannon();
+            wagon = new Wagon();
+            beams = [
+                new Beam(50, 150, 200, 10),
+                new Beam(canvas.width - 250, 200, 200, 10)
+            ];
+            startTimer();
+            gameLoop();
+            backgroundMusic.play().catch(error => console.log(error));
         }
 
         function createClouds() {
@@ -254,343 +208,6 @@
                 };
                 clouds.push(cloud);
             }
-        }
-
-        function drawClouds() {
-            ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-            clouds.forEach(cloud => {
-                ctx.beginPath();
-                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
-
-        function updateClouds() {
-            clouds.forEach(cloud => {
-                cloud.x -= cloud.speed;
-                if (cloud.x < -cloud.size) {
-                    cloud.x = canvas.width + cloud.size;
-                    cloud.y = Math.random() * 100 + 50;
-                    cloud.size = Math.random() * 40 + 30;
-                    cloud.speed = Math.random() * 0.5 + 0.2;
-                }
-            });
-        }
-
-        function drawMountains() {
-            // Foreground mountains
-            ctx.fillStyle = '#654321';
-            ctx.beginPath();
-            ctx.moveTo(0, canvas.height);
-            ctx.lineTo(canvas.width * 0.15, canvas.height * 0.7);
-            ctx.lineTo(canvas.width * 0.3, canvas.height);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.4, canvas.height);
-            ctx.lineTo(canvas.width * 0.55, canvas.height * 0.6);
-            ctx.lineTo(canvas.width * 0.7, canvas.height);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.8, canvas.height);
-            ctx.lineTo(canvas.width * 0.9, canvas.height * 0.65);
-            ctx.lineTo(canvas.width, canvas.height);
-            ctx.closePath();
-            ctx.fill();
-
-            // Snow caps
-            ctx.fillStyle = '#FFFFFF';
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.15, canvas.height * 0.7);
-            ctx.lineTo(canvas.width * 0.13, canvas.height * 0.75);
-            ctx.lineTo(canvas.width * 0.17, canvas.height * 0.75);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.55, canvas.height * 0.6);
-            ctx.lineTo(canvas.width * 0.53, canvas.height * 0.65);
-            ctx.lineTo(canvas.width * 0.57, canvas.height * 0.65);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.9, canvas.height * 0.65);
-            ctx.lineTo(canvas.width * 0.88, canvas.height * 0.7);
-            ctx.lineTo(canvas.width * 0.92, canvas.height * 0.7);
-            ctx.closePath();
-            ctx.fill();
-        }
-
-        class Cannon {
-            constructor() {
-                this.width = 60;
-                this.height = 40;
-                this.x = canvas.width / 2 - this.width / 2;
-                this.y = canvas.height - this.height - 5;
-                this.speed = 100;
-                this.direction = 1;
-            }
-
-            update(delta) {
-                this.x += this.direction * this.speed * delta;
-                if (this.x > canvas.width - this.width || this.x < 0) {
-                    this.direction *= -1;
-                }
-            }
-
-            draw() {
-                // Cannon base
-                ctx.fillStyle = "#2F4F4F";
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-
-                // Cannon barrel
-                ctx.fillStyle = "#696969";
-                ctx.fillRect(this.x + this.width / 4, this.y - 20, this.width / 2, 20);
-
-                // Cannon tip
-                ctx.fillStyle = "#000000";
-                ctx.fillRect(this.x + this.width / 2 - 5, this.y - 40, 10, 30);
-
-                // Wheels
-                ctx.fillStyle = "#3E2723";
-                for (let i = 0; i < 4; i++) {
-                    ctx.beginPath();
-                    ctx.arc(this.x + 15 * i + 10, this.y + this.height + 5, 8, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-
-            increaseSpeed() {
-                this.speed *= 1.08;
-            }
-        }
-
-        class Wagon {
-            constructor() {
-                this.width = 100;
-                this.height = 50;
-                this.ropeY = canvas.height / 2;
-                this.speed = 150;
-                this.direction = -1;
-                this.x = canvas.width / 2 - this.width / 2;
-                this.y = this.ropeY + 15;
-            }
-
-            update(delta) {
-                this.x += this.direction * this.speed * delta;
-                if (this.x > canvas.width - this.width || this.x < 0) {
-                    this.direction *= -1;
-                }
-            }
-
-            draw() {
-                // Rope
-                ctx.strokeStyle = '#8B4513';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(0, this.ropeY);
-                ctx.lineTo(canvas.width, this.ropeY);
-                ctx.stroke();
-
-                // Rope to wagon
-                ctx.beginPath();
-                ctx.moveTo(this.x + this.width / 2, this.ropeY);
-                ctx.lineTo(this.x + this.width / 2, this.y);
-                ctx.stroke();
-
-                // Wagon (Bucket)
-                ctx.fillStyle = '#D2691E';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-
-                // Wagon details
-                ctx.fillStyle = '#8B4513';
-                ctx.fillRect(this.x, this.y + this.height - 10, this.width, 10);
-            }
-
-            increaseSpeed() {
-                this.speed *= 1.08;
-            }
-        }
-
-        class Shell {
-            constructor(x, y, vy) {
-                this.radius = 10;
-                this.x = x;
-                this.y = y;
-                this.vy = vy;
-                this.speed = Math.abs(vy);
-                this.active = true;
-                this.bounced = false;
-            }
-
-            update(delta) {
-                this.y += this.vy * delta;
-
-                if (this.y < 0 || this.y > canvas.height) {
-                    this.active = false;
-                }
-
-                beams.forEach(beam => {
-                    if (this.y - this.radius <= beam.y + beam.height &&
-                        this.y - this.radius >= beam.y &&
-                        this.x >= beam.x && this.x <= beam.x + beam.width) {
-                        this.vy = -this.vy;
-                        this.bounced = true;
-                        this.y = beam.y + beam.height + this.radius;
-                        ricochetSound.play().catch(error => console.log(error)); // Play ricochet sound
-                    }
-                });
-
-                // Collision with wagon
-                if (
-                    this.y + this.radius >= wagon.y &&
-                    this.y - this.radius <= wagon.y + wagon.height &&
-                    this.x >= wagon.x &&
-                    this.x <= wagon.x + wagon.width
-                ) {
-                    if (this.bounced) {
-                        targetsHit++;
-                        this.active = false;
-                        updateUI();
-                        hitSound.play().catch(error => console.log(error)); // Play hit sound
-                        if (targetsHit >= 10) {
-                            endRound();
-                        }
-                    } else {
-                        this.vy = -this.vy;
-                    }
-                }
-            }
-
-            draw() {
-                ctx.fillStyle = "#000000";
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-
-        class Beam {
-            constructor(x, y, width, height) {
-                this.x = x;
-                this.y = y;
-                this.width = width;
-                this.height = height;
-            }
-
-            draw() {
-                ctx.fillStyle = '#8B4513';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-            }
-        }
-
-        function shoot() {
-            if (!audioInitialized) {
-                init(); // Initialize the game on first shoot
-                audioInitialized = true;
-            }
-
-            if (shotsLeft > 0 && !shell) {
-                const shellX = cannon.x + cannon.width / 2;
-                const shellY = cannon.y;
-                const velocityY = -800;
-                shell = new Shell(shellX, shellY, velocityY);
-                shotsLeft--;
-                updateUI();
-                shootSound.play().catch(error => console.log(error)); // Play shoot sound
-                if (shotsLeft < 10 - targetsHit) {
-                    endGame("Out of ammo! Try again.", true);
-                }
-            }
-        }
-
-        function updateUI() {
-            shotsText.textContent = `Shots Left: ${shotsLeft}`;
-            scoreText.textContent = `Score: ${targetsHit}/10`;
-            timerText.textContent = `Time: ${Math.ceil(timer)}`;
-            roundInfo.textContent = `Round: ${round}`;
-        }
-
-        function endRound() {
-            clearInterval(timerInterval);
-            roundMessage.textContent = `Round ${round + 1}`;
-            roundMessage.style.display = 'block';
-
-            setTimeout(() => {
-                roundMessage.style.display = 'none';
-                nextRound();
-            }, 2000);
-        }
-
-        function nextRound() {
-            if (round < 10) {
-                round++;
-                targetsHit = 0;
-                shotsLeft = 20;
-                timer = 90;
-                cannon.increaseSpeed();
-                wagon.increaseSpeed();
-                startTimer();
-            } else {
-                endGame("Congratulations! You won Dynamic Cannon!", false);
-            }
-        }
-
-        function startTimer() {
-            timerInterval = setInterval(() => {
-                if (timer > 0) {
-                    timer--;
-                    updateUI();
-                } else {
-                    clearInterval(timerInterval);
-                    endGame("Time's up! Try again.", true);
-                }
-            }, 1000);
-        }
-
-        function endGame(message, restart) {
-            clearInterval(timerInterval);
-            roundMessage.textContent = message;
-            roundMessage.style.display = 'block';
-
-            if (restart) {
-                setTimeout(() => {
-                    resetGame();
-                }, 3000);
-            } else {
-                backgroundMusic.pause();
-                backgroundMusic.currentTime = 0;
-                audioInitialized = false;
-            }
-        }
-
-        function resetGame() {
-            round = 1;
-            targetsHit = 0;
-            shotsLeft = 20;
-            timer = 90;
-            cannon.speed = 100;
-            wagon.speed = 150;
-            roundMessage.style.display = 'none';
-            startTimer();
-        }
-
-        function init() {
-            resizeCanvas();
-            createClouds();
-            cannon = new Cannon();
-            wagon = new Wagon();
-            beams = [
-                new Beam(50, 150, 200, 10),
-                new Beam(canvas.width - 250, 200, 200, 10)
-            ];
-            startTimer();
-            gameLoop();
-            backgroundMusic.play().catch(error => console.log(error)); // Play background music
         }
 
         function gameLoop() {
@@ -610,23 +227,15 @@
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawMountains();
             drawClouds();
-            beams.forEach(beam => beam.draw());
-            wagon.draw();
             cannon.draw();
+            wagon.draw();
+            beams.forEach(beam => beam.draw());
             if (shell) shell.draw();
         }
 
-        function resizeCanvas() {
-            const gameField = document.getElementById('gameField');
-            canvas.width = gameField.clientWidth;
-            canvas.height = gameField.clientHeight;
-        }
-
         window.onload = function() {
-            resizeCanvas();
-            preloadAudio(); // Start preloading audio files
+            preloadAudio();
         };
 
         shootButton.addEventListener('click', function() {
@@ -636,6 +245,75 @@
         window.addEventListener('resize', function() {
             resizeCanvas();
         });
+
+        function resizeCanvas() {
+            const gameField = document.getElementById('gameField');
+            canvas.width = gameField.clientWidth;
+            canvas.height = gameField.clientHeight;
+        }
+
+        function shoot() {
+            if (!audioInitialized) {
+                init();
+                audioInitialized = true;
+            }
+            shootSound.play().catch(error => console.log(error));
+        }
+
+        class Cannon {
+            // Define Cannon class
+            draw() {
+                ctx.fillStyle = "#2F4F4F";
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        class Wagon {
+            // Define Wagon class
+            draw() {
+                ctx.fillStyle = "#D2691E";
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        class Shell {
+            // Define Shell class
+            draw() {
+                ctx.fillStyle = "#000000";
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class Beam {
+            // Define Beam class
+            draw() {
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        function updateClouds() {
+            clouds.forEach(cloud => {
+                cloud.x -= cloud.speed;
+                if (cloud.x < -cloud.size) {
+                    cloud.x = canvas.width + cloud.size;
+                    cloud.y = Math.random() * 100 + 50;
+                    cloud.size = Math.random() * 40 + 30;
+                    cloud.speed = Math.random() * 0.5 + 0.2;
+                }
+            });
+        }
+
+        function drawClouds() {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+            clouds.forEach(cloud => {
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
     </script>
 </body>
 </html>
