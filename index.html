@@ -5,10 +5,146 @@
     <title>Dynamic Cannon</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        /* [Your existing CSS styles here] */
+        /* Your existing CSS styles */
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #ff7eb3, #ff758c, #ff7eb3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Adding stars to the background */
+        body::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(2px 2px at 20% 30%, white, transparent),
+                        radial-gradient(1.5px 1.5px at 80% 20%, white, transparent),
+                        radial-gradient(2px 2px at 50% 70%, white, transparent),
+                        radial-gradient(1px 1px at 70% 50%, white, transparent),
+                        radial-gradient(1.5px 1.5px at 30% 80%, white, transparent),
+                        radial-gradient(1px 1px at 90% 60%, white, transparent);
+            background-repeat: repeat;
+            background-size: 100% 100%;
+            z-index: 1;
+        }
+
+        #moon {
+            position: absolute;
+            top: 10%;
+            left: 75%;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle at 30% 30%, #fff, #f0f0f0);
+            border-radius: 50%;
+            z-index: 1;
+            box-shadow: -5px -5px 15px rgba(255, 255, 255, 0.5);
+        }
+
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            max-width: 720px;
+            max-height: 1280px;
+            background: transparent;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 10px solid #333;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+            z-index: 2;
+        }
+
+        #gameField {
+            width: 100%;
+            height: 80%;
+            background: transparent;
+            position: relative;
+            border-bottom: 5px solid #000;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+
+        #ui {
+            width: 100%;
+            height: 20%;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-top: 5px solid #000;
+        }
+
+        .infoRow {
+            margin: 5px 0;
+            font-size: 20px;
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        #shootButton {
+            width: 100%;
+            padding: 15px;
+            font-size: 20px;
+            border: none;
+            background: linear-gradient(to right, #4caf50, #2e7d32);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 5px #1b5e20;
+            transition: all 0.1s ease-in-out;
+        }
+
+        #shootButton:active {
+            box-shadow: 0 2px #1b5e20;
+            transform: translateY(3px);
+        }
+
+        #roundMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            font-size: 28px;
+            text-align: center;
+            display: none;
+            z-index: 3;
+            border-radius: 10px;
+            text-shadow: 2px 2px 4px #000;
+            animation: fadeInOut 2s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
 
         /* Loading Screen Styles */
-        #loadingMessage {
+        #loadingScreen {
             position: absolute;
             top: 0;
             left: 0;
@@ -29,7 +165,7 @@
     <div id="moon"></div>
 
     <!-- Loading Screen -->
-    <div id="loadingMessage">Loading... Please wait.</div>
+    <div id="loadingScreen">Loading... Please wait.</div>
 
     <div id="gameContainer" style="display: none;">
         <div id="gameField">
@@ -55,7 +191,7 @@
         const scoreText = document.getElementById('score');
         const shootButton = document.getElementById('shootButton');
         const roundMessage = document.getElementById('roundMessage');
-        const loadingMessage = document.getElementById('loadingMessage');
+        const loadingScreen = document.getElementById('loadingScreen');
         const gameContainer = document.getElementById('gameContainer');
 
         let clouds = [];
@@ -71,13 +207,13 @@
         let audioInitialized = false;
 
         // Audio objects with accessible URLs from Pixabay
-        const backgroundMusic = new Audio('https://cdn.pixabay.com/download/audio/2022/07/28/audio_58a18c2f34.mp3?filename=ambient-background-music-amp-110010.mp3');
+        const backgroundMusic = new Audio('https://cdn.pixabay.com/download/audio/2022/03/15/audio_c2dc92954e.mp3?filename=relaxing-music-11784.mp3');
         backgroundMusic.loop = true;
         backgroundMusic.volume = 0.2;
 
-        const shootSound = new Audio('https://cdn.pixabay.com/download/audio/2021/08/04/audio_a436e38d06.mp3?filename=cannon-blast-6143.mp3');
+        const shootSound = new Audio('https://cdn.pixabay.com/download/audio/2022/02/23/audio_9c1ae1c6ca.mp3?filename=deep-organic-hit-6184.mp3');
         const ricochetSound = new Audio('https://cdn.pixabay.com/download/audio/2021/08/04/audio_7d5fba0e9d.mp3?filename=ricochet-5787.mp3');
-        const hitSound = new Audio('https://cdn.pixabay.com/download/audio/2022/05/24/audio_96f3c14b0e.mp3?filename=snare-drum-hit-112192.mp3');
+        const hitSound = new Audio('https://cdn.pixabay.com/download/audio/2021/10/11/audio_b6ecdd5d8c.mp3?filename=snare-drum-hit-143989.mp3');
 
         // Array of all audio files to preload
         const audioFiles = [backgroundMusic, shootSound, ricochetSound, hitSound];
@@ -95,14 +231,14 @@
             Promise.all(promises)
                 .then(() => {
                     // All audio files are loaded
-                    loadingMessage.style.display = 'none';
+                    loadingScreen.style.display = 'none';
                     gameContainer.style.display = 'flex';
                     // Do not start the game yet; wait for user interaction
                 })
                 .catch((error) => {
                     console.error('Error loading audio:', error);
                     // Proceed even if some audio files failed to load
-                    loadingMessage.style.display = 'none';
+                    loadingScreen.style.display = 'none';
                     gameContainer.style.display = 'flex';
                 });
         }
@@ -142,7 +278,6 @@
         }
 
         function drawMountains() {
-            // Your existing code for drawing mountains
             // Foreground mountains
             ctx.fillStyle = '#654321';
             ctx.beginPath();
