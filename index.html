@@ -38,14 +38,14 @@
             position: relative;
             border: 5px solid #000; /* Черные границы игровой зоны */
             box-sizing: border-box;
-            overflow: hidden; /* Чтобы облака не выходили за пределы */
+            overflow: hidden; /* Чтобы элементы не выходили за пределы */
         }
         /* Canvas занимает всю область игрового поля */
         canvas {
             display: block;
             width: 100%;
             height: 100%;
-            z-index: 2; /* Чтобы канвас был поверх облаков */
+            z-index: 2; /* Чтобы канвас был поверх остальных элементов */
         }
         /* Интерфейс игры */
         #ui {
@@ -78,30 +78,6 @@
             cursor: pointer;
             margin-top: 10px;
         }
-        /* Экран окончания игры */
-        #gameOverScreen {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 30px;
-            text-align: center;
-            display: none;
-            z-index: 3; /* Обеспечиваем, чтобы экран окончания игры был сверху всех элементов */
-            border-radius: 10px;
-        }
-        #gameOverScreen button {
-            padding: 10px 20px;
-            font-size: 16px;
-            margin-top: 20px;
-            cursor: pointer;
-            border: none;
-            background: #4CAF50;
-            color: white;
-            border-radius: 5px;
-        }
     </style>
 </head>
 <body>
@@ -116,10 +92,6 @@
             <div class="infoRow" id="score">Забито: 0/10</div>
             <button id="shootButton">Выстрелить</button>
         </div>
-        <div id="gameOverScreen">
-            <div id="gameOverMessage"></div>
-            <button onclick="restartGame()">Играть снова</button>
-        </div>
     </div>
 
     <script>
@@ -130,50 +102,13 @@
         const timerText = document.getElementById('timer');
         const shotsText = document.getElementById('shots');
         const scoreText = document.getElementById('score');
-        const gameOverScreen = document.getElementById('gameOverScreen');
-        const gameOverMessage = document.getElementById('gameOverMessage');
         const shootButton = document.getElementById('shootButton');
 
-        let clouds = [];
         let cannon, wagon, shell = null;
         let shotsLeft = 20;
         let targetsHit = 0;
         let timer = 90; // Таймер на 90 секунд
-        let timerInterval;
-
-        function createClouds() {
-            clouds = [];
-            for (let i = 0; i < 5; i++) {
-                let cloud = {
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * 100,
-                    size: Math.random() * 40 + 30,
-                    speed: Math.random() * 0.5 + 0.2
-                };
-                clouds.push(cloud);
-            }
-        }
-
-        function drawClouds() {
-            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-            clouds.forEach(cloud => {
-                ctx.beginPath();
-                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
-
-        function updateClouds() {
-            clouds.forEach(cloud => {
-                cloud.x -= cloud.speed;
-                if (cloud.x < -cloud.size) {
-                    cloud.x = canvas.width + cloud.size;
-                    cloud.y = Math.random() * 100;
-                    cloud.size = Math.random() * 40 + 30;
-                    cloud.speed = Math.random() * 0.5 + 0.2;
-                }
-            });
-        }
+        let beams = [];
 
         // Класс для пушки (танк)
         class Cannon {
@@ -181,7 +116,7 @@
                 this.width = 60;
                 this.height = 40;
                 this.x = canvas.width / 2 - this.width / 2;
-                this.y = canvas.height - this.height - 10;
+                this.y = canvas.height - this.height - 5; // Пушка теперь стоит вплотную к земле
                 this.speed = 100; // Скорость движения танка
                 this.direction = 1;
             }
@@ -208,10 +143,10 @@
                 this.widthBottom = 60; // Нижняя ширина ведра
                 this.height = 50; // Высота ведра
                 this.ropeY = 50; // Положение веревки
-                this.speed = 100; // Скорость движения ведра
-                this.direction = 1;
+                this.speed = 150; // Скорость движения ведра, независимая от пушки
+                this.direction = -1; // Движение в другую сторону
                 this.x = canvas.width / 2 - this.widthTop / 2;
-                this.y = this.ropeY + 20; // Ведро ниже веревки
+                this.y = this.ropeY; // Ведро теперь вплотную к веревке
             }
 
             update(delta) {
@@ -242,7 +177,7 @@
             }
         }
 
-        // Класс для снаряда (без инерции, движется строго вверх)
+        // Класс для снаряда (движется строго вверх и отражается от балок)
         class Shell {
             constructor(x, y, vy) {
                 this.radius = 10;
@@ -250,32 +185,27 @@
                 this.y = y;
                 this.vy = vy;
                 this.active = true;
-                this.bounced = false; // Флаг, указывающий, отскочило ли ядро
             }
 
             update(delta) {
                 this.y += this.vy * delta;
 
-                // Если снаряд выходит за экран, он удаляется
-                if (this.y > canvas.height || this.y < 0) {
+                // Если снаряд выходит за экран сверху, он возвращается обратно (отражение)
+                if (this.y - this.radius <= 0) {
+                    this.vy *= -1; // Отражение по вертикали
+                }
+
+                // Проверка столкновения с балками (только если уже отразился от верхней границы)
+                beams.forEach(beam => {
+                    if (this.y - this.radius <= beam.y + beam.height && this.y - this.radius >= beam.y &&
+                        this.x >= beam.x && this.x <= beam.x + beam.width) {
+                        this.vy *= -1; // Отражение от балки
+                    }
+                });
+
+                // Если мяч выходит за нижний предел, он деактивируется (можно стрелять заново)
+                if (this.y - this.radius > canvas.height) {
                     this.active = false;
-                }
-
-                // Проверка столкновения с балками
-                if (this.y - this.radius <= 20 && !this.bounced) { // Балки находятся почти у верхней границы
-                    if ((this.x > 50 && this.x < 250) || (this.x > canvas.width - 250 && this.x < canvas.width - 50)) {
-                        this.vy *= -1; // Отражение по вертикали
-                        this.bounced = true; // Помечаем, что ядро отскочило от балки
-                    }
-                }
-
-                // Проверка столкновения с ведром
-                if (this.y + this.radius >= wagon.y && this.x >= wagon.x && this.x <= wagon.x + wagon.widthTop) {
-                    this.vy *= -1; // Отражение ядра от нижней части ведра
-                    if (this.bounced && this.y <= wagon.y + wagon.height / 2) {
-                        targetsHit++; // Снаряд засчитывается, если отскочил от балки
-                        this.active = false; // Убираем снаряд
-                    }
                 }
             }
 
@@ -285,25 +215,6 @@
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fill();
             }
-        }
-
-        // Функция для стрельбы (без инерции, строго вертикально)
-        function shoot() {
-            if (shotsLeft > 0 && !shell) {
-                const shellX = cannon.x + cannon.width / 2;
-                const shellY = cannon.y;
-                const velocityY = -2000; // Увеличенная вертикальная скорость для мощного выстрела вверх
-                shell = new Shell(shellX, shellY, velocityY);
-                shotsLeft--;
-                updateUI();
-            }
-        }
-
-        // Обновление UI
-        function updateUI() {
-            shotsText.textContent = `Выстрелов: ${shotsLeft}`;
-            scoreText.textContent = `Забито: ${targetsHit}/10`;
-            timerText.textContent = `Время: ${Math.ceil(timer)}`;
         }
 
         // Класс для балок
@@ -321,40 +232,38 @@
             }
         }
 
-        let beams = [];
+        // Функция для стрельбы (без гравитации, отражение от балок)
+        function shoot() {
+            if (shotsLeft > 0 && !shell) {
+                const shellX = cannon.x + cannon.width / 2;
+                const shellY = cannon.y;
+                const velocityY = -1000; // Скорость движения ядра вверх
+                shell = new Shell(shellX, shellY, velocityY);
+                shotsLeft--;
+                updateUI();
+            }
+        }
+
+        // Обновление UI
+        function updateUI() {
+            shotsText.textContent = `Выстрелов: ${shotsLeft}`;
+        }
 
         // Инициализация игры
         function init() {
             resizeCanvas();
-            createClouds();
             cannon = new Cannon();
             wagon = new Wagon();
             beams = [
                 new Beam(50, 20, 200, 10), // Первая балка (у верхней границы)
                 new Beam(canvas.width - 250, 20, 200, 10) // Вторая балка (у верхней границы)
             ];
-            timerInterval = setInterval(() => {
-                if (timer > 0) {
-                    timer -= 1;
-                    updateUI();
-                } else {
-                    clearInterval(timerInterval);
-                    endGame();
-                }
-            }, 1000); // Таймер уменьшается каждую секунду
             gameLoop();
-        }
-
-        // Завершение игры
-        function endGame() {
-            gameOverMessage.textContent = "Время вышло! Игра окончена.";
-            gameOverScreen.style.display = "block";
         }
 
         // Игровой цикл
         function gameLoop() {
             const delta = 1 / 60;
-            updateClouds();
             cannon.update(delta);
             wagon.update(delta);
             if (shell) {
@@ -370,7 +279,6 @@
         // Рисование объектов
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawClouds();
             cannon.draw();
             wagon.draw();
             beams.forEach(beam => beam.draw());
