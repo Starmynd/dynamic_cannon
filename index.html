@@ -130,6 +130,9 @@
         let beams = [];
         let timerInterval;
 
+        // Флаг для инициализации аудио после взаимодействия пользователя
+        let audioInitialized = false;
+
         // Добавляем аудио объекты с ссылками на звуки из Pixabay.com
         const backgroundMusic = new Audio('https://cdn.pixabay.com/audio/2021/12/07/audio_d2d3ba5b72.mp3');
         backgroundMusic.loop = true;
@@ -360,6 +363,12 @@
 
         function shoot() {
             if (shotsLeft > 0 && !shell) {
+                // Инициализируем аудио при первом выстреле
+                if (!audioInitialized) {
+                    backgroundMusic.play(); // Проигрываем фоновую музыку
+                    audioInitialized = true;
+                }
+
                 const shellX = cannon.x + cannon.width / 2;
                 const shellY = cannon.y;
                 const velocityY = -800;
@@ -426,6 +435,11 @@
                 setTimeout(() => {
                     resetGame();
                 }, 3000);
+            } else {
+                // Останавливаем фоновую музыку при окончании игры
+                backgroundMusic.pause();
+                backgroundMusic.currentTime = 0;
+                audioInitialized = false;
             }
         }
 
@@ -449,7 +463,7 @@
                 new Beam(50, 20, 200, 10),
                 new Beam(canvas.width - 250, 20, 200, 10)
             ];
-            backgroundMusic.play(); // Проигрываем фоновую музыку
+            // backgroundMusic.play(); // Убираем из init()
             startTimer();
             gameLoop();
         }
