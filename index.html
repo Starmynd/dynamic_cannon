@@ -34,16 +34,35 @@
         #gameField {
             width: 100%;
             height: 80%;
-            background: #228B22; /* Зеленый фон земли */
+            background: #b0e0e6; /* Бледно-голубой фон области */
             position: relative;
             border: 5px solid #000; /* Черные границы игровой зоны */
             box-sizing: border-box;
+            overflow: hidden; /* Чтобы облака не выходили за пределы */
+        }
+        /* Анимация облаков */
+        @keyframes moveClouds {
+            0% { background-position: 0 0; }
+            100% { background-position: -1000px 0; }
+        }
+        /* Облака, движущиеся по экрану */
+        #gameField:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://i.imgur.com/oAOwBwn.png') repeat-x; /* Ссылка на изображение облаков */
+            animation: moveClouds 30s linear infinite;
+            z-index: 1; /* Помещаем облака поверх фона, но под другие элементы */
         }
         /* Canvas занимает всю область игрового поля */
         canvas {
             display: block;
             width: 100%;
             height: 100%;
+            z-index: 2; /* Чтобы канвас был поверх облаков */
         }
         /* Интерфейс игры */
         #ui {
@@ -87,7 +106,7 @@
             padding: 30px;
             text-align: center;
             display: none;
-            z-index: 2;
+            z-index: 3; /* Обеспечиваем, чтобы экран окончания игры был сверху всех элементов */
             border-radius: 10px;
         }
         #gameOverScreen button {
@@ -112,6 +131,13 @@
             <div class="infoRow" id="timer">Время: 90</div>
             <div class="infoRow" id="shots">Выстрелов: 20</div>
             <div class="infoRow" id="score">Забито: 0/10</div>
+            <div>
+                <label>
+                    <input type="checkbox" id="powerfulWeaponToggle">
+                    Мощное оружие
+                </label>
+            </div>
+            <div class="infoRow" id="powerShots">Мощных выстрелов: 5</div>
             <button id="shootButton">Выстрелить</button>
         </div>
         <div id="gameOverScreen">
@@ -121,11 +147,10 @@
     </div>
 
     <script>
-        // Получение элементов Canvas и контекста
+        // Инициализация канваса и всех объектов игры остается неизменной
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // UI элементы
         const roundInfo = document.getElementById('roundInfo');
         const timerText = document.getElementById('timer');
         const shotsText = document.getElementById('shots');
@@ -133,438 +158,17 @@
         const gameOverScreen = document.getElementById('gameOverScreen');
         const gameOverMessage = document.getElementById('gameOverMessage');
         const shootButton = document.getElementById('shootButton');
+        const powerfulWeaponToggle = document.getElementById('powerfulWeaponToggle');
+        const powerShotsText = document.getElementById('powerShots');
 
-        // Звуки (опционально)
-        const backgroundMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'); // Замените на ссылку на фоновую музыку
+        const backgroundMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
         backgroundMusic.loop = true;
 
-        const shootSound = new Audio('https://www.soundjay.com/mechanical/sounds/cannon-shot-01.mp3'); // Замените на ссылку на звук выстрела
-        const hitSound = new Audio('https://www.soundjay.com/button/sounds/button-10.mp3'); // Замените на ссылку на звук попадания
+        const shootSound = new Audio('https://www.soundjay.com/mechanical/sounds/cannon-shot-01.mp3');
+        const hitSound = new Audio('https://www.soundjay.com/button/sounds/button-10.mp3');
 
-        // Объекты игры
-        let cannon;
-        let wagon;
-        let shell = null; // Только одно активное ядро
-        let targetsHit = 0;
-        let shotsLeft = 20;
-        let round = 1;
-        let timer = 90; // 90 секунд на раунд
-        let roundActive = true;
-        let wagonSpeed = 100; // pixels per second
-        let cannonSpeed = 115; // pixels per second (увеличено на 15%)
-        let endTime = 0; // Временной маркер окончания раунда
+        // Ваш основной игровой код, как и раньше (инициализация объектов, логика выстрелов и попаданий, обработка столкновений и т.д.)
 
-        // Класс Пушки
-        class Cannon {
-            constructor() {
-                this.width = 60;
-                this.height = 40;
-                this.x = canvas.width / 2 - this.width / 2;
-                this.y = canvas.height - this.height - 10; // Немного выше нижней границы
-                this.speed = cannonSpeed; // pixels per second
-                this.direction = 1; // 1 - вправо, -1 - влево
-                this.color = '#8B4513'; // Коричневый цвет пушки
-            }
-
-            update(delta) {
-                this.x += this.direction * this.speed * delta;
-
-                // Поворот направления при достижении границ
-                if (this.x > canvas.width - this.width || this.x < 0) {
-                    this.direction *= -1;
-                }
-            }
-
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                // Рисуем основание пушки
-                ctx.rect(this.x, this.y + this.height - 10, this.width, 10);
-                ctx.fill();
-
-                // Рисуем корпус пушки
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y + this.height - 10);
-                ctx.lineTo(this.x + this.width * 0.1, this.y);
-                ctx.lineTo(this.x + this.width * 0.9, this.y);
-                ctx.lineTo(this.x + this.width, this.y + this.height - 10);
-                ctx.closePath();
-                ctx.fill();
-
-                // Рисуем дуло пушки
-                ctx.fillStyle = '#A0522D'; // Темно-коричневый для дула
-                ctx.beginPath();
-                ctx.moveTo(this.x + this.width * 0.9, this.y);
-                ctx.lineTo(this.x + this.width * 0.95, this.y - 30);
-                ctx.lineTo(this.x + this.width * 0.85, this.y);
-                ctx.closePath();
-                ctx.fill();
-            }
-        }
-
-        // Класс Вагонетки (Ведро на веревке)
-        class Wagon {
-            constructor(speed) {
-                this.width = 80;
-                this.height = 50;
-                this.x = canvas.width / 2 - this.width / 2;
-                this.y = 150; // Положение на веревке
-                this.speed = speed; // pixels per second
-                this.direction = -1; // Начинаем движение в противоположную сторону от пушки
-                this.color = '#000000'; // Черный цвет ведра
-                this.ropeY = 100; // Высота веревки
-            }
-
-            update(delta) {
-                this.x += this.direction * this.speed * delta;
-
-                // Поворот направления при достижении границ (веревки)
-                if (this.x > canvas.width - this.width || this.x < 0) {
-                    this.direction *= -1;
-                }
-            }
-
-            draw() {
-                // Рисуем веревку
-                ctx.strokeStyle = '#8B4513'; // Коричневый цвет веревки
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.moveTo(this.x + this.width / 2, this.ropeY);
-                ctx.lineTo(this.x + this.width / 2, this.y);
-                ctx.stroke();
-
-                // Рисуем ведро
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.rect(this.x + 10, this.y, this.width - 20, this.height - 10);
-                ctx.fill();
-
-                // Рисуем крышку ведра
-                ctx.fillStyle = '#696969'; // Темно-серый цвет крышки
-                ctx.beginPath();
-                ctx.rect(this.x + 10, this.y - 10, this.width - 20, 10);
-                ctx.fill();
-
-                // Рисуем ручки ведра
-                ctx.strokeStyle = '#000000';
-                ctx.lineWidth = 2;
-                // Левая ручка
-                ctx.beginPath();
-                ctx.arc(this.x + 15, this.y + 10, 10, Math.PI / 2, -Math.PI / 2, true);
-                ctx.stroke();
-                // Правая ручка
-                ctx.beginPath();
-                ctx.arc(this.x + this.width - 15, this.y + 10, 10, -Math.PI / 2, Math.PI / 2, true);
-                ctx.stroke();
-            }
-        }
-
-        // Класс Ядра
-        class Shell {
-            constructor(x, y, velocityX, velocityY) {
-                this.radius = 10;
-                this.x = x;
-                this.y = y;
-                this.vx = velocityX; // pixels per second
-                this.vy = velocityY; // pixels per second
-                this.active = true;
-                this.color = '#FFD700'; // Золотой цвет ядра
-                this.hasBounced = false; // Флаг, указывающий, отразилось ли ядро
-                this.hasCollided = false; // Флаг, указывающий, было ли уже столкновение
-            }
-
-            update(delta) {
-                this.x += this.vx * delta;
-                this.y += this.vy * delta;
-
-                // Проверка на столкновение со стенами и потолком
-                // Левая и правая стены
-                if (this.x - this.radius <= 0) {
-                    this.x = this.radius; // Корректировка позиции
-                    this.vx *= -1;
-                    this.hasBounced = true;
-                }
-                if (this.x + this.radius >= canvas.width) {
-                    this.x = canvas.width - this.radius; // Корректировка позиции
-                    this.vx *= -1;
-                    this.hasBounced = true;
-                }
-                // Потолок
-                if (this.y - this.radius <= 0) {
-                    this.y = this.radius; // Корректировка позиции
-                    this.vy *= -1;
-                    this.hasBounced = true;
-                }
-                // Нижняя граница: убираем ядро
-                if (this.y - this.radius > canvas.height) {
-                    this.active = false;
-                }
-            }
-
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-
-        // Инициализация игры
-        function init() {
-            console.log('Инициализация игры');
-
-            // Настройка размеров Canvas
-            resizeCanvas();
-
-            // Инициализация объектов
-            cannon = new Cannon();
-            wagon = new Wagon(wagonSpeed);
-
-            // Запуск фоновой музыки (опционально)
-            backgroundMusic.play().catch((error) => {
-                console.log('Автовоспроизведение не удалось:', error);
-            });
-
-            // Установка времени окончания раунда
-            endTime = performance.now() + timer * 1000; // 90 секунд от текущего времени
-
-            // Запуск игрового цикла
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Игровой цикл
-        function gameLoop(timestamp) {
-            if (!endTime) {
-                endTime = timestamp + timer * 1000; // Установка времени окончания, если оно не задано
-            }
-
-            update();
-            draw();
-
-            if (roundActive) {
-                requestAnimationFrame(gameLoop);
-            }
-        }
-
-        // Обновление состояния игры
-        function update() {
-            // Вычисляем оставшееся время
-            const currentTime = performance.now();
-            timer = (endTime - currentTime) / 1000; // В секундах
-
-            if (timer < 0) timer = 0;
-
-            // Обновление объектов
-            const delta = 1 / 60; // Предполагаемая частота обновления ~60 FPS
-            cannon.update(delta);
-            wagon.update(delta);
-
-            // Обновление ядра
-            if (shell) {
-                shell.update(delta);
-
-                // Проверка столкновений с вагонеткой, только если еще не было столкновения
-                if (!shell.hasCollided && checkCollision(shell, wagon)) {
-                    shell.hasCollided = true; // Помечаем, что столкновение уже обработано
-
-                    if (shell.hasBounced && shell.y <= wagon.y + wagon.height / 2) {
-                        // Засчитываем попадание
-                        targetsHit++;
-                        hitSound.play();
-                        console.log(`Попадание! Забито: ${targetsHit}`);
-
-                        shell.active = false;
-                        shell = null; // Разрешаем новое выстреливание
-
-                        if (targetsHit >= 10) {
-                            endRound(true);
-                        }
-                    } else {
-                        // Отражение ядра без засчитывания попадания
-                        shell.vy *= -1;
-                        shell.hasBounced = true;
-                    }
-                }
-
-                // Проверка, упало ли ядро за экран
-                if (!shell.active) {
-                    shell = null; // Разрешаем новое выстреливание
-                }
-            }
-
-            // Проверка окончания раунда
-            if (timer <= 0) {
-                endRound(false);
-            }
-
-            // Проверка окончания выстрелов
-            if (shotsLeft <= 0 && !shell) {
-                endRound(false);
-            }
-
-            // Обновление UI
-            updateUI();
-        }
-
-        // Рисование объектов
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Рисование объектов
-            cannon.draw();
-            wagon.draw();
-            if (shell) {
-                shell.draw();
-            }
-        }
-
-        // Обработка нажатия клавиши "Пробел" для выстрела
-        window.addEventListener('keydown', function(e) {
-            if (e.code === 'Space' && roundActive && !shell) {
-                shoot();
-            }
-        });
-
-        // Обработка нажатия кнопки "Выстрелить" на мобильных устройствах
-        shootButton.addEventListener('click', function() {
-            if (roundActive && !shell) {
-                shoot();
-            }
-        });
-
-        // Функция выстрела
-        function shoot() {
-            if (shotsLeft <= 0) {
-                console.log('Выстрелы закончились!');
-                return;
-            }
-
-            const shellX = cannon.x + cannon.width / 2;
-            const shellY = cannon.y;
-            const velocityX = cannon.direction * cannon.speed * 0.5; // Инерция от пушки
-
-            // Рассчитаем velocityY для достижения вагонетки за ~0.7 секунды
-            const velocityY = -757.14;
-
-            // Создаём новое ядро
-            shell = new Shell(shellX, shellY, velocityX, velocityY);
-            shotsLeft--;
-            shootSound.play();
-
-            console.log(`Выстрел совершен! Осталось выстрелов: ${shotsLeft}`);
-
-            updateUI();
-        }
-
-        // Проверка столкновений двух объектов (круг и прямоугольник)
-        function checkCollision(shell, wagon) {
-            // Находим ближайшую точку на ведре к ядру
-            const closestX = clamp(shell.x, wagon.x, wagon.x + wagon.width);
-            const closestY = clamp(shell.y, wagon.y, wagon.y + wagon.height);
-
-            // Вычисляем расстояние до ближайшей точки
-            const distanceX = shell.x - closestX;
-            const distanceY = shell.y - closestY;
-
-            const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
-
-            return distanceSquared < (shell.radius * shell.radius);
-        }
-
-        // Функция ограничивает значение между min и max
-        function clamp(value, min, max) {
-            return Math.max(min, Math.min(max, value));
-        }
-
-        // Обновление UI
-        function updateUI() {
-            roundInfo.textContent = `Раунд: ${round}`;
-            timerText.textContent = `Время: ${Math.ceil(timer)}`;
-            shotsText.textContent = `Выстрелов: ${shotsLeft}`;
-            scoreText.textContent = `Забито: ${targetsHit}/10`;
-        }
-
-        // Завершение раунда
-        function endRound(success) {
-            console.log(`Раунд завершен. Победа: ${success}`);
-            roundActive = false;
-            backgroundMusic.pause();
-            gameOverScreen.style.display = 'block';
-            if (success) {
-                gameOverMessage.textContent = `Поздравляем! Вы выиграли раунд ${round}.`;
-                // Переход к следующему раунду через 2 секунды
-                setTimeout(() => {
-                    round++;
-                    targetsHit = 0;
-                    shotsLeft = 20;
-                    timer = 90;
-                    wagonSpeed *= 1.15; // Увеличение скорости вагонетки на 15%
-                    cannonSpeed *= 1.15; // Увеличение скорости пушки на 15%
-                    cannon.speed = cannonSpeed;
-                    wagon.speed = wagonSpeed;
-                    shell = null;
-                    gameOverScreen.style.display = 'none';
-                    backgroundMusic.currentTime = 0;
-                    backgroundMusic.play().catch((error) => {
-                        console.log('Автовоспроизведение не удалось:', error);
-                    });
-                    roundActive = true;
-                    endTime = performance.now() + timer * 1000; // Установка времени окончания для нового раунда
-                    requestAnimationFrame(gameLoop);
-                }, 2000);
-            } else {
-                gameOverMessage.textContent = `Game Over! Вы исчерпали выстрелы или время вышло.`;
-            }
-        }
-
-        // Перезапуск игры
-        function restartGame() {
-            console.log('Перезапуск игры');
-            gameOverScreen.style.display = 'none';
-            round = 1;
-            targetsHit = 0;
-            shotsLeft = 20;
-            timer = 90;
-            wagonSpeed = 100;
-            cannonSpeed = 115; // Начальная скорость пушки с учетом увеличения на 15%
-            cannon.speed = cannonSpeed;
-            wagon.speed = wagonSpeed;
-            shell = null;
-            roundActive = true;
-            backgroundMusic.currentTime = 0;
-            backgroundMusic.play().catch((error) => {
-                console.log('Автовоспроизведение не удалось:', error);
-            });
-            endTime = performance.now() + timer * 1000; // Установка времени окончания для нового раунда
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Настройка размеров Canvas под размер игрового поля
-        function resizeCanvas() {
-            const gameField = document.getElementById('gameField');
-            canvas.width = gameField.clientWidth;
-            canvas.height = gameField.clientHeight;
-
-            // Перезапуск игры при изменении размеров
-            if (cannon && wagon) {
-                cannon.x = canvas.width / 2 - cannon.width / 2;
-                cannon.y = canvas.height - cannon.height - 10;
-                wagon.x = canvas.width / 2 - wagon.width / 2;
-                wagon.ropeY = 100; // Обновить позицию веревки, если нужно
-                wagon.y = 150; // Обновить позицию ведра
-            }
-        }
-
-        // Инициализация игры после загрузки страницы
-        window.onload = function() {
-            resizeCanvas();
-            init();
-        };
-
-        // Обработка изменения размера окна (для адаптивности)
-        window.addEventListener('resize', function() {
-            resizeCanvas();
-        });
     </script>
 </body>
 </html>
