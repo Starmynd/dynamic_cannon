@@ -135,7 +135,6 @@
         const shootButton = document.getElementById('shootButton');
 
         let clouds = [];
-        let angle = 0;
         let cannon, wagon, shell = null;
         let shotsLeft = 20;
         let targetsHit = 0;
@@ -202,31 +201,34 @@
             }
         }
 
-        // Класс для качающегося ведра (трапеция)
+        // Класс для ведра на "рельсе"
         class Wagon {
             constructor() {
                 this.widthTop = 100; // Верхняя ширина ведра
                 this.widthBottom = 60; // Нижняя ширина ведра
                 this.height = 50; // Высота ведра
-                this.ropeLength = 150; // Длина веревки
-                this.amplitude = canvas.width / 3; // Амплитуда качания
-                this.speed = 2; // Скорость качания
-                this.angle = Math.PI / 2; // Начальный угол (в центре)
+                this.ropeY = 50; // Положение веревки
+                this.amplitude = canvas.width / 2; // Амплитуда движения ведра
+                this.speed = 2; // Скорость движения ведра
+                this.direction = 1; // Направление движения
+                this.x = canvas.width / 2 - this.widthTop / 2;
+                this.y = this.ropeY + 20; // Ведро ниже веревки
             }
 
             update(delta) {
-                this.angle += delta * this.speed;
-                this.x = canvas.width / 2 + Math.sin(this.angle) * this.amplitude - this.widthTop / 2;
-                this.y = this.ropeLength;
+                this.x += this.direction * this.speed * delta;
+                if (this.x > canvas.width - this.widthTop || this.x < 0) {
+                    this.direction *= -1; // Меняем направление движения
+                }
             }
 
             draw() {
-                // Веревка
+                // Веревка (натянутая линия от левого до правого края)
                 ctx.strokeStyle = '#8B4513';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.moveTo(canvas.width / 2, 0);
-                ctx.lineTo(this.x + this.widthTop / 2, this.y);
+                ctx.moveTo(0, this.ropeY);
+                ctx.lineTo(canvas.width, this.ropeY);
                 ctx.stroke();
 
                 // Ведро (трапеция)
@@ -270,12 +272,12 @@
                     this.vy *= -1; // Отражение ядра
                     if (this.bounced && this.y <= wagon.y + wagon.height / 2) {
                         targetsHit++; // Увеличиваем счет только если ядро отскочило от балки
-                        shell.active = false;
+                        this.active = false; // Снаряд исчезает после попадания
                     }
                 }
 
-                // Проверка выхода за границы
-                if (this.y > canvas.height) {
+                // Если снаряд вылетел за экран — он исчезает
+                if (this.y < 0 || this.y > canvas.height || this.x < 0 || this.x > canvas.width) {
                     this.active = false;
                 }
             }
