@@ -112,6 +112,13 @@
             <div class="infoRow" id="timer">Время: 90</div>
             <div class="infoRow" id="shots">Выстрелов: 20</div>
             <div class="infoRow" id="score">Забито: 0/10</div>
+            <div>
+                <label>
+                    <input type="checkbox" id="powerfulWeaponToggle">
+                    Мощное оружие
+                </label>
+            </div>
+            <div class="infoRow" id="powerShots">Мощных выстрелов: 5</div>
             <button id="shootButton">Выстрелить</button>
         </div>
         <div id="gameOverScreen">
@@ -133,6 +140,8 @@
         const gameOverScreen = document.getElementById('gameOverScreen');
         const gameOverMessage = document.getElementById('gameOverMessage');
         const shootButton = document.getElementById('shootButton');
+        const powerfulWeaponToggle = document.getElementById('powerfulWeaponToggle');
+        const powerShotsText = document.getElementById('powerShots');
 
         // Звуки (опционально)
         const backgroundMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'); // Замените на ссылку на фоновую музыку
@@ -153,6 +162,7 @@
         let wagonSpeed = 100; // pixels per second
         let cannonSpeed = 115; // pixels per second (увеличено на 15%)
         let endTime = 0; // Временной маркер окончания раунда
+        let powerfulShotsLeft = 5; // Количество мощных выстрелов
 
         // Класс Пушки
         class Cannon {
@@ -255,6 +265,7 @@
                 this.active = true;
                 this.color = '#FFD700'; // Золотой цвет ядра
                 this.hasBounced = false; // Флаг, указывающий, отразилось ли ядро
+                this.hasCollided = false; // Флаг, указывающий, было ли уже столкновение
             }
 
             update(delta) {
@@ -293,9 +304,54 @@
             }
         }
 
+        // Класс Мощного Ядра, наследуется от Shell
+        class PowerfulShell extends Shell {
+            constructor(x, y, velocityX, velocityY) {
+                super(x, y, velocityX, velocityY);
+                this.radius = 15; // Увеличенный радиус
+                this.color = '#FF0000'; // Красный цвет для отличия
+                this.power = 3; // Множитель урона или эффекта
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Добавим обводку для лучшей видимости
+                ctx.strokeStyle = '#800000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Метод для создания эффектов при попадании
+            createExplosion() {
+                // Здесь можно реализовать анимацию взрыва
+                // Например, добавить несколько частиц
+                for (let i = 0; i < 10; i++) {
+                    let angle = Math.random() * Math.PI * 2;
+                    let speed = Math.random() * 100 + 50;
+                    let particle = {
+                        x: this.x,
+                        y: this.y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        alpha: 1
+                    };
+                    particles.push(particle);
+                }
+            }
+        }
+
+        // Массив для частиц взрыва
+        let particles = [];
+
         // Инициализация игры
         function init() {
-            console.log('Initializing game');
+            console.log('Инициализация игры');
 
             // Настройка размеров Canvas
             resizeCanvas();
@@ -306,7 +362,7 @@
 
             // Запуск фоновой музыки (опционально)
             backgroundMusic.play().catch((error) => {
-                console.log('Autoplay failed:', error);
+                console.log('Автовоспроизведение не удалось:', error);
             });
 
             // Установка времени окончания раунда
@@ -347,17 +403,29 @@
             if (shell) {
                 shell.update(delta);
 
-                // Проверка столкновений с вагонеткой
-                if (checkCollision(shell, wagon)) {
+                // Проверка столкновений с вагонеткой, только если еще не было столкновения
+                if (!shell.hasCollided && checkCollision(shell, wagon)) {
+                    shell.hasCollided = true; // Помечаем, что столкновение уже обработано
+
                     if (shell.hasBounced && shell.y <= wagon.y + wagon.height / 2) {
-                        // Попадание засчитывается только если ядро отразилось и попало в верхнюю часть ведра
-                        targetsHit++;
-                        hitSound.play();
-                        console.log(`Hit! Targets Hit: ${targetsHit}`);
+                        // Проверка типа ядра
+                        if (shell instanceof PowerfulShell) {
+                            targetsHit += shell.power; // Увеличиваем забитые цели на множитель мощности
+                            shell.createExplosion(); // Создаем эффект взрыва
+                            hitSound.play();
+                            console.log(`Мощное попадание! Забито: ${targetsHit}`);
+                        } else {
+                            targetsHit++;
+                            hitSound.play();
+                            console.log(`Попадание! Забито: ${targetsHit}`);
+                        }
+
                         shell.active = false;
                         shell = null; // Разрешаем новое выстреливание
+
                         if (targetsHit >= 10) {
                             endRound(true);
+                            return; // Прерываем дальнейшее выполнение функции
                         }
                     } else {
                         // Отражение ядра без засчитывания попадания
@@ -372,14 +440,26 @@
                 }
             }
 
+            // Обновление частиц взрыва
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx * delta;
+                particle.y += particle.vy * delta;
+                particle.alpha -= 0.02;
+                if (particle.alpha <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+
             // Проверка окончания раунда
             if (timer <= 0) {
                 endRound(false);
+                return; // Прерываем дальнейшее выполнение функции
             }
 
             // Проверка окончания выстрелов
             if (shotsLeft <= 0 && !shell) {
                 endRound(false);
+                return; // Прерываем дальнейшее выполнение функции
             }
 
             // Обновление UI
@@ -396,6 +476,14 @@
             if (shell) {
                 shell.draw();
             }
+
+            // Рисование частиц взрыва
+            particles.forEach(particle => {
+                ctx.fillStyle = `rgba(255, 165, 0, ${particle.alpha})`; // Оранжевый цвет частиц
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
         }
 
         // Обработка нажатия клавиши "Пробел" для выстрела
@@ -415,7 +503,7 @@
         // Функция выстрела
         function shoot() {
             if (shotsLeft <= 0) {
-                console.log('No shots left!');
+                console.log('Выстрелы закончились!');
                 return;
             }
 
@@ -424,16 +512,24 @@
             const velocityX = cannon.direction * cannon.speed * 0.5; // Инерция от пушки
 
             // Рассчитаем velocityY для достижения вагонетки за ~0.7 секунды
-            // Расстояние по вертикали: y=630 (пушка) до y=100 (вагонетка) = 530 пикселей
-            // velocityY = distance / time = 530 / 0.7 ≈ 757.14 пикселей/сек
-            // Направление вверх, поэтому отрицательное
             const velocityY = -757.14;
 
-            shell = new Shell(shellX, shellY, velocityX, velocityY);
+            let newShell;
+            if (powerfulWeaponToggle.checked && powerfulShotsLeft > 0) {
+                newShell = new PowerfulShell(shellX, shellY, velocityX * 1.5, velocityY * 1.5); // Увеличенная скорость
+                powerfulShotsLeft--;
+            } else {
+                newShell = new Shell(shellX, shellY, velocityX, velocityY);
+            }
+
+            shell = newShell;
             shotsLeft--;
             shootSound.play();
 
-            console.log(`Shot fired! Shots left: ${shotsLeft}`);
+            console.log(`Выстрел совершен! Осталось выстрелов: ${shotsLeft}`);
+            if (powerfulWeaponToggle.checked && powerfulShotsLeft <= 0) {
+                powerfulWeaponToggle.checked = false; // Отключаем переключатель, если мощных выстрелов нет
+            }
 
             updateUI();
         }
@@ -464,11 +560,12 @@
             timerText.textContent = `Время: ${Math.ceil(timer)}`;
             shotsText.textContent = `Выстрелов: ${shotsLeft}`;
             scoreText.textContent = `Забито: ${targetsHit}/10`;
+            powerShotsText.textContent = `Мощных выстрелов: ${powerfulShotsLeft}`;
         }
 
         // Завершение раунда
         function endRound(success) {
-            console.log(`End round. Success: ${success}`);
+            console.log(`Раунд завершен. Победа: ${success}`);
             roundActive = false;
             backgroundMusic.pause();
             gameOverScreen.style.display = 'block';
@@ -485,10 +582,11 @@
                     cannon.speed = cannonSpeed;
                     wagon.speed = wagonSpeed;
                     shell = null;
+                    powerfulShotsLeft = 5; // Сброс количества мощных выстрелов
                     gameOverScreen.style.display = 'none';
                     backgroundMusic.currentTime = 0;
                     backgroundMusic.play().catch((error) => {
-                        console.log('Autoplay failed:', error);
+                        console.log('Автовоспроизведение не удалось:', error);
                     });
                     roundActive = true;
                     endTime = performance.now() + timer * 1000; // Установка времени окончания для нового раунда
@@ -501,7 +599,7 @@
 
         // Перезапуск игры
         function restartGame() {
-            console.log('Restarting game');
+            console.log('Перезапуск игры');
             gameOverScreen.style.display = 'none';
             round = 1;
             targetsHit = 0;
@@ -513,9 +611,10 @@
             wagon.speed = wagonSpeed;
             shell = null;
             roundActive = true;
+            powerfulShotsLeft = 5; // Сброс количества мощных выстрелов
             backgroundMusic.currentTime = 0;
             backgroundMusic.play().catch((error) => {
-                console.log('Autoplay failed:', error);
+                console.log('Автовоспроизведение не удалось:', error);
             });
             endTime = performance.now() + timer * 1000; // Установка времени окончания для нового раунда
             requestAnimationFrame(gameLoop);
