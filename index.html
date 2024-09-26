@@ -9,7 +9,7 @@
         body {
             margin: 0;
             padding: 0;
-            background: #87ceeb; /* Голубой фон неба */
+            background: #6dbbe3; /* Более насыщенный голубой фон неба */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -34,7 +34,7 @@
         #gameField {
             width: 100%;
             height: 80%;
-            background: #b0e0e6; /* Бледно-голубой фон области */
+            background: #87cefa; /* Чуть более насыщенный голубой цвет для неба */
             position: relative;
             border: 5px solid #000; /* Черные границы игровой зоны */
             box-sizing: border-box;
@@ -133,7 +133,7 @@
         // Добавляем фоновую музыку
         const backgroundMusic = new Audio('https://www.bensound.com/bensound-music/bensound-creativeminds.mp3');
         backgroundMusic.loop = true; // Зацикливаем
-        backgroundMusic.play();
+        backgroundMusic.play().catch(err => console.log('Failed to play background music:', err));
 
         function createClouds() {
             clouds = [];
@@ -226,10 +226,20 @@
             }
 
             draw() {
-                ctx.fillStyle = "#8B4513"; // Коричневый цвет танка
-                ctx.fillRect(this.x, this.y, this.width, this.height); // Основа танка
-                ctx.fillStyle = "#A0522D"; // Темно-коричневый для дула
-                ctx.fillRect(this.x + this.width / 2 - 5, this.y - 30, 10, 30); // Дуло
+                ctx.fillStyle = "#1E3A8A"; // Темно-синий цвет танка
+                ctx.fillRect(this.x, this.y, this.width, this.height); // Основная часть танка
+                ctx.fillStyle = "#3949AB"; // Темно-синий для верхней части
+                ctx.fillRect(this.x + this.width / 4, this.y - 20, this.width / 2, 20); // Башня танка
+
+                ctx.fillStyle = "#000000"; // Черный для дула
+                ctx.fillRect(this.x + this.width / 2 - 5, this.y - 40, 10, 30); // Дуло
+
+                ctx.fillStyle = "#212121"; // Темно-серый для колес
+                for (let i = 0; i < 4; i++) {
+                    ctx.beginPath();
+                    ctx.arc(this.x + 15 * i + 10, this.y + this.height + 5, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
 
             increaseSpeed() {
@@ -275,7 +285,7 @@
                 ctx.stroke();
 
                 // Ведро (трапеция)
-                ctx.fillStyle = '#000000';
+                ctx.fillStyle = '#FF69B4'; // Розовый цвет ведра
                 ctx.beginPath();
                 ctx.moveTo(this.x, this.y); // Левый верхний угол
                 ctx.lineTo(this.x + this.widthTop, this.y); // Правый верхний угол
@@ -368,7 +378,7 @@
 
                 // Проверка: достаточно ли выстрелов для победы
                 if (shotsLeft < 10 - targetsHit) {
-                    endGame("Out of balls! Try again!");
+                    endGame("Out of balls! Try again!", true);
                 }
             }
         }
@@ -404,7 +414,7 @@
                 wagon.increaseSpeed();
                 startTimer();
             } else {
-                endGame("Congrats! You are the winner of Dynamic Cannon!");
+                endGame("Congrats! You are the winner of Dynamic Cannon!", false);
             }
         }
 
@@ -416,16 +426,34 @@
                     updateUI();
                 } else {
                     clearInterval(timerInterval);
-                    endGame("Time's up! Try again!");
+                    endGame("Time's up! Try again!", true);
                 }
             }, 1000);
         }
 
-        // Завершение игры с сообщением
-        function endGame(message) {
+        // Завершение игры с сообщением и возможностью перезапуска
+        function endGame(message, restart) {
             clearInterval(timerInterval);
             roundMessage.textContent = message;
             roundMessage.style.display = 'block';
+
+            if (restart) {
+                setTimeout(() => {
+                    resetGame();
+                }, 3000); // Перезапуск игры через 3 секунды
+            }
+        }
+
+        // Перезапуск игры
+        function resetGame() {
+            round = 1;
+            targetsHit = 0;
+            shotsLeft = 20;
+            timer = 90;
+            cannon.speed = 100;
+            wagon.speed = 150;
+            roundMessage.style.display = 'none';
+            startTimer();
         }
 
         // Инициализация игры
