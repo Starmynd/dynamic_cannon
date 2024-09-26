@@ -302,8 +302,10 @@
                 this.x = x;
                 this.y = y;
                 this.vy = vy;
+                this.vx = 0; // Горизонтальная скорость может быть добавлена позже, если потребуется
+                this.speed = Math.abs(vy); // Скорость всегда постоянная
                 this.active = true;
-                this.bounced = false; // Был ли мяч отражен от балки
+                this.bounced = false; // Было ли отражение от балки
             }
 
             update(delta) {
@@ -316,9 +318,13 @@
 
                 // Проверка столкновения с балками
                 beams.forEach(beam => {
-                    if (this.y - this.radius <= beam.y + beam.height && this.y - this.radius >= beam.y &&
-                        this.x >= beam.x && this.x <= beam.x + beam.width) {
-                        this.vy *= -1; // Отражение от балки
+                    if (
+                        this.y - this.radius <= beam.y + beam.height && 
+                        this.y - this.radius >= beam.y && 
+                        this.x >= beam.x && 
+                        this.x <= beam.x + beam.width
+                    ) {
+                        this.vy = -this.vy; // Просто меняем направление, но скорость сохраняется
                         this.bounced = true; // Мяч отразился от балки
                         // Коррекция положения мяча после отскока
                         this.y = beam.y + beam.height + this.radius;
@@ -326,7 +332,11 @@
                 });
 
                 // Проверка на попадание в ведро (только если мяч был отражен)
-                if (this.y + this.radius >= wagon.y && this.x >= wagon.x && this.x <= wagon.x + wagon.widthTop) {
+                if (
+                    this.y + this.radius >= wagon.y && 
+                    this.x >= wagon.x && 
+                    this.x <= wagon.x + wagon.widthTop
+                ) {
                     if (this.bounced) {
                         // Мяч был отражен и попал в ведро
                         targetsHit++; // Засчитываем очко
@@ -337,7 +347,7 @@
                         }
                     } else {
                         // Мяч не был отражен от балки, отскакивает обратно
-                        this.vy *= -1; // Отражение от нижней части ведра
+                        this.vy = -this.vy; // Просто меняем направление
                     }
                 }
             }
@@ -370,7 +380,7 @@
             if (shotsLeft > 0 && !shell) {
                 const shellX = cannon.x + cannon.width / 2;
                 const shellY = cannon.y;
-                const velocityY = -800; // Скорость движения ядра вверх, чуть снижена для улучшения контроля
+                const velocityY = -800; // Скорость движения ядра вверх
                 shell = new Shell(shellX, shellY, velocityY);
                 shotsLeft--;
                 updateUI();
