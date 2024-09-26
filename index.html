@@ -40,23 +40,6 @@
             box-sizing: border-box;
             overflow: hidden; /* Чтобы облака не выходили за пределы */
         }
-        /* Анимация облаков */
-        @keyframes moveClouds {
-            0% { background-position: 0 0; }
-            100% { background-position: -1000px 0; }
-        }
-        /* Облака, движущиеся по экрану */
-        #gameField:before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('https://i.imgur.com/oAOwBwn.png') repeat-x; /* Ссылка на изображение облаков */
-            animation: moveClouds 30s linear infinite;
-            z-index: 1; /* Помещаем облака поверх фона, но под другие элементы */
-        }
         /* Canvas занимает всю область игрового поля */
         canvas {
             display: block;
@@ -147,7 +130,6 @@
     </div>
 
     <script>
-        // Инициализация канваса и всех объектов игры остается неизменной
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -161,14 +143,81 @@
         const powerfulWeaponToggle = document.getElementById('powerfulWeaponToggle');
         const powerShotsText = document.getElementById('powerShots');
 
-        const backgroundMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
-        backgroundMusic.loop = true;
+        // Задаем фоновые облака
+        let clouds = [];
 
-        const shootSound = new Audio('https://www.soundjay.com/mechanical/sounds/cannon-shot-01.mp3');
-        const hitSound = new Audio('https://www.soundjay.com/button/sounds/button-10.mp3');
+        function createClouds() {
+            clouds = [];
+            for (let i = 0; i < 5; i++) {
+                let cloud = {
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * 100,
+                    size: Math.random() * 40 + 30,
+                    speed: Math.random() * 0.5 + 0.2
+                };
+                clouds.push(cloud);
+            }
+        }
 
-        // Ваш основной игровой код, как и раньше (инициализация объектов, логика выстрелов и попаданий, обработка столкновений и т.д.)
+        function drawClouds() {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            clouds.forEach(cloud => {
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
 
+        function updateClouds() {
+            clouds.forEach(cloud => {
+                cloud.x -= cloud.speed;
+                if (cloud.x < -cloud.size) {
+                    cloud.x = canvas.width + cloud.size;
+                    cloud.y = Math.random() * 100;
+                    cloud.size = Math.random() * 40 + 30;
+                    cloud.speed = Math.random() * 0.5 + 0.2;
+                }
+            });
+        }
+
+        // Инициализация игры
+        function init() {
+            resizeCanvas();
+            createClouds();
+            gameLoop();
+        }
+
+        // Игровой цикл
+        function gameLoop() {
+            updateClouds();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Рисование объектов
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawClouds();
+            // Здесь также вызываются функции отрисовки пушки, ведра и других игровых объектов
+        }
+
+        // Настройка размеров Canvas под размер игрового поля
+        function resizeCanvas() {
+            const gameField = document.getElementById('gameField');
+            canvas.width = gameField.clientWidth;
+            canvas.height = gameField.clientHeight;
+        }
+
+        // Инициализация игры после загрузки страницы
+        window.onload = function() {
+            resizeCanvas();
+            init();
+        };
+
+        // Обработка изменения размера окна (для адаптивности)
+        window.addEventListener('resize', function() {
+            resizeCanvas();
+        });
     </script>
 </body>
 </html>
