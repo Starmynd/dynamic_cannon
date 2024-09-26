@@ -114,13 +114,6 @@
             <div class="infoRow" id="timer">Время: 90</div>
             <div class="infoRow" id="shots">Выстрелов: 20</div>
             <div class="infoRow" id="score">Забито: 0/10</div>
-            <div>
-                <label>
-                    <input type="checkbox" id="powerfulWeaponToggle">
-                    Мощное оружие
-                </label>
-            </div>
-            <div class="infoRow" id="powerShots">Мощных выстрелов: 5</div>
             <button id="shootButton">Выстрелить</button>
         </div>
         <div id="gameOverScreen">
@@ -140,14 +133,12 @@
         const gameOverScreen = document.getElementById('gameOverScreen');
         const gameOverMessage = document.getElementById('gameOverMessage');
         const shootButton = document.getElementById('shootButton');
-        const powerfulWeaponToggle = document.getElementById('powerfulWeaponToggle');
-        const powerShotsText = document.getElementById('powerShots');
 
-        // Задаем фоновые облака
         let clouds = [];
         let angle = 0;
-        let angleSpeed = 0.02;
-        let cannon, wagon;
+        let cannon, wagon, shell = null;
+        let shotsLeft = 20;
+        let targetsHit = 0;
 
         function createClouds() {
             clouds = [];
@@ -214,10 +205,10 @@
             constructor() {
                 this.width = 80;
                 this.height = 50;
-                this.ropeLength = 100; // Длина веревки
+                this.ropeLength = 150; // Длина веревки
                 this.amplitude = canvas.width / 3; // Амплитуда качания
                 this.speed = 2; // Скорость качания
-                this.angle = 0; // Угол
+                this.angle = Math.PI / 2; // Начальный угол (в центре)
             }
 
             update(delta) {
@@ -241,6 +232,47 @@
             }
         }
 
+        // Класс для ядра
+        class Shell {
+            constructor(x, y, vx, vy) {
+                this.radius = 10;
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.active = true;
+            }
+
+            update(delta) {
+                this.x += this.vx * delta;
+                this.y += this.vy * delta;
+
+                // Проверка выхода за границы
+                if (this.y > canvas.height) {
+                    this.active = false;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = "#FFD700";
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Функция для стрельбы
+        function shoot() {
+            if (shotsLeft > 0 && !shell) {
+                const shellX = cannon.x + cannon.width / 2;
+                const shellY = cannon.y;
+                const velocityX = 0; // Вертикальная стрельба
+                const velocityY = -500; // Скорость вверх
+                shell = new Shell(shellX, shellY, velocityX, velocityY);
+                shotsLeft--;
+            }
+        }
+
         // Инициализация игры
         function init() {
             resizeCanvas();
@@ -256,6 +288,12 @@
             updateClouds();
             cannon.update(delta);
             wagon.update(delta);
+            if (shell) {
+                shell.update(delta);
+                if (!shell.active) {
+                    shell = null; // Разрешить следующий выстрел
+                }
+            }
             draw();
             requestAnimationFrame(gameLoop);
         }
@@ -266,6 +304,7 @@
             drawClouds();
             cannon.draw();
             wagon.draw();
+            if (shell) shell.draw();
         }
 
         // Настройка размеров Canvas под размер игрового поля
@@ -280,6 +319,11 @@
             resizeCanvas();
             init();
         };
+
+        // Обработка нажатия кнопки "Выстрелить"
+        shootButton.addEventListener('click', function() {
+            shoot();
+        });
 
         // Обработка изменения размера окна (для адаптивности)
         window.addEventListener('resize', function() {
