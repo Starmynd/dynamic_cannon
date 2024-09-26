@@ -259,7 +259,7 @@
                 this.y += this.vy * delta;
 
                 // Если снаряд выходит за экран, он удаляется
-                if (this.y > canvas.height || this.x < 0 || this.x > canvas.width) {
+                if (this.y > canvas.height || this.y < 0 || this.x < 0 || this.x > canvas.width) {
                     this.active = false;
                 }
 
@@ -294,8 +294,8 @@
             if (shotsLeft > 0 && !shell) {
                 const shellX = cannon.x + cannon.width / 2;
                 const shellY = cannon.y;
-                const velocityX = cannon.direction * cannon.speed * 0.2; // Инерция от движения танка
-                const velocityY = -1000; // Высокая вертикальная скорость
+                const velocityX = cannon.direction * cannon.speed * 0.5; // Инерция от движения танка
+                const velocityY = -2000; // Увеличенная вертикальная скорость для мощного выстрела вверх
                 shell = new Shell(shellX, shellY, velocityX, velocityY);
                 shotsLeft--;
                 updateUI();
