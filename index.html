@@ -78,6 +78,21 @@
             cursor: pointer;
             margin-top: 10px;
         }
+        /* Экран окончания раунда */
+        #roundMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 30px;
+            font-size: 24px;
+            text-align: center;
+            display: none;
+            z-index: 3; /* Чтобы сообщение было поверх всех элементов */
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body>
@@ -92,6 +107,7 @@
             <div class="infoRow" id="score">Забито: 0/10</div>
             <button id="shootButton">Выстрелить</button>
         </div>
+        <div id="roundMessage">Round 2</div> <!-- Сообщение о новом раунде -->
     </div>
 
     <script>
@@ -103,12 +119,14 @@
         const shotsText = document.getElementById('shots');
         const scoreText = document.getElementById('score');
         const shootButton = document.getElementById('shootButton');
+        const roundMessage = document.getElementById('roundMessage');
 
         let clouds = [];
         let cannon, wagon, shell = null;
         let shotsLeft = 20;
         let targetsHit = 0;
         let timer = 90; // Таймер на 90 секунд
+        let round = 1;
         let beams = [];
         let timerInterval;
 
@@ -190,6 +208,10 @@
                 ctx.fillStyle = "#A0522D"; // Темно-коричневый для дула
                 ctx.fillRect(this.x + this.width / 2 - 5, this.y - 30, 10, 30); // Дуло
             }
+
+            increaseSpeed() {
+                this.speed *= 1.08; // Увеличение скорости на 8% в каждом раунде
+            }
         }
 
         // Класс для ведра на "рельсе"
@@ -239,9 +261,13 @@
                 ctx.closePath();
                 ctx.fill();
             }
+
+            increaseSpeed() {
+                this.speed *= 1.08; // Увеличение скорости на 8% в каждом раунде
+            }
         }
 
-        // Класс для снаряда (движется строго вверх и исчезает при выходе за границы)
+        // Класс для снаряда (засчитывается очко при попадании отраженного мяча в ведро)
         class Shell {
             constructor(x, y, vy) {
                 this.radius = 10;
@@ -249,6 +275,7 @@
                 this.y = y;
                 this.vy = vy;
                 this.active = true;
+                this.bounced = false; // Был ли мяч отражен от балки
             }
 
             update(delta) {
@@ -264,8 +291,23 @@
                     if (this.y - this.radius <= beam.y + beam.height && this.y - this.radius >= beam.y &&
                         this.x >= beam.x && this.x <= beam.x + beam.width) {
                         this.vy *= -1; // Отражение от балки
+                        this.bounced = true; // Мяч отразился от балки
                     }
                 });
+
+                // Проверка на попадание в ведро (только если мяч был отражен)
+                if (this.y + this.radius >= wagon.y && this.x >= wagon.x && this.x <= wagon.x + wagon.widthTop) {
+                    if (this.bounced) {
+                        targetsHit++; // Засчитываем очко
+                        this.active = false; // Мяч исчезает после попадания
+                        updateUI();
+                        if (targetsHit >= 10) {
+                            endRound();
+                        }
+                    } else {
+                        this.vy *= -1; // Отражение от нижней части ведра
+                    }
+                }
             }
 
             draw() {
@@ -306,7 +348,50 @@
         // Обновление UI
         function updateUI() {
             shotsText.textContent = `Выстрелов: ${shotsLeft}`;
+            scoreText.textContent = `Забито: ${targetsHit}/10`;
             timerText.textContent = `Время: ${Math.ceil(timer)}`;
+            roundInfo.textContent = `Раунд: ${round}`;
+        }
+
+        // Завершение раунда
+        function endRound() {
+            clearInterval(timerInterval);
+            roundMessage.textContent = `Round ${round + 1}`;
+            roundMessage.style.display = 'block';
+
+            setTimeout(() => {
+                roundMessage.style.display = 'none';
+                nextRound();
+            }, 2000);
+        }
+
+        // Следующий раунд
+        function nextRound() {
+            if (round < 10) {
+                round++;
+                targetsHit = 0;
+                shotsLeft = 20;
+                timer = 90;
+                cannon.increaseSpeed();
+                wagon.increaseSpeed();
+                startTimer();
+            } else {
+                roundMessage.textContent = "Congrats! You are the winner of Dynamic Cannon!";
+                roundMessage.style.display = 'block';
+            }
+        }
+
+        // Запуск таймера
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                if (timer > 0) {
+                    timer--;
+                    updateUI();
+                } else {
+                    clearInterval(timerInterval);
+                    endGame();
+                }
+            }, 1000);
         }
 
         // Инициализация игры
@@ -319,15 +404,7 @@
                 new Beam(50, 20, 200, 10), // Первая балка (у верхней границы)
                 new Beam(canvas.width - 250, 20, 200, 10) // Вторая балка (у верхней границы)
             ];
-            timerInterval = setInterval(() => {
-                if (timer > 0) {
-                    timer--;
-                    updateUI();
-                } else {
-                    clearInterval(timerInterval);
-                    endGame();
-                }
-            }, 1000); // Таймер уменьшается каждую секунду
+            startTimer();
             gameLoop();
         }
 
