@@ -5,6 +5,7 @@
     <title>Dynamic Cannon</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        /* Ваши стили остаются без изменений */
         body {
             margin: 0;
             padding: 0;
@@ -106,14 +107,8 @@
             <div class="infoRow" id="score">Забито: 0/10</div>
             <button id="shootButton">Выстрелить</button>
         </div>
-        <div id="roundMessage">Round 2</div>
+        <div id="roundMessage">Round 2</div> <!-- Сообщение о новом раунде -->
     </div>
-
-    <!-- Аудиофайлы -->
-    <audio id="backgroundMusic" src="https://freesound.org/data/previews/270/270304_5123851-lq.mp3" loop></audio>
-    <audio id="shootSound" src="https://freesound.org/data/previews/161/161195_2437358-lq.mp3"></audio>
-    <audio id="bounceSound" src="https://freesound.org/data/previews/411/411791_5123851-lq.mp3"></audio>
-    <audio id="hitSound" src="https://freesound.org/data/previews/735/73581_634166-lq.mp3"></audio>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -126,15 +121,6 @@
         const shootButton = document.getElementById('shootButton');
         const roundMessage = document.getElementById('roundMessage');
 
-        // Загрузка и воспроизведение аудиофайлов
-        const backgroundMusic = document.getElementById('backgroundMusic');
-        const shootSound = document.getElementById('shootSound');
-        const bounceSound = document.getElementById('bounceSound');
-        const hitSound = document.getElementById('hitSound');
-
-        // Включаем фоновую музыку
-        backgroundMusic.play();
-
         let clouds = [];
         let cannon, wagon, shell = null;
         let shotsLeft = 20;
@@ -143,6 +129,15 @@
         let round = 1;
         let beams = [];
         let timerInterval;
+
+        // Добавляем аудио объекты с ссылками на звуки из Freesound.org
+        const backgroundMusic = new Audio('https://freesound.org/data/previews/466/466103_8385271-lq.mp3');
+        backgroundMusic.loop = true;
+        backgroundMusic.volume = 0.2;
+
+        const shootSound = new Audio('https://freesound.org/data/previews/558/558574_2737700-lq.mp3');
+        const ricochetSound = new Audio('https://freesound.org/data/previews/160/160178_2737700-lq.mp3');
+        const hitSound = new Audio('https://freesound.org/data/previews/341/341695_6100280-lq.mp3');
 
         function createClouds() {
             clouds = [];
@@ -176,6 +171,38 @@
                     cloud.speed = Math.random() * 0.5 + 0.2;
                 }
             });
+        }
+
+        function drawMountains() {
+            ctx.fillStyle = 'rgba(139, 69, 19, 1)';
+            ctx.beginPath();
+            ctx.moveTo(50, canvas.height);
+            ctx.lineTo(canvas.width * 0.25, canvas.height * 0.4);
+            ctx.lineTo(canvas.width * 0.5, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.75, canvas.height);
+            ctx.lineTo(canvas.width, canvas.height * 0.5);
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.25, canvas.height * 0.4);
+            ctx.lineTo(canvas.width * 0.22, canvas.height * 0.5);
+            ctx.lineTo(canvas.width * 0.28, canvas.height * 0.5);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.9, canvas.height * 0.5);
+            ctx.lineTo(canvas.width * 0.88, canvas.height * 0.55);
+            ctx.lineTo(canvas.width * 0.92, canvas.height * 0.55);
+            ctx.closePath();
+            ctx.fill();
         }
 
         class Cannon {
@@ -284,10 +311,11 @@
                         this.vy = -this.vy;
                         this.bounced = true;
                         this.y = beam.y + beam.height + this.radius;
-                        bounceSound.play(); // Звук отскока
+                        ricochetSound.play(); // Проигрываем звук рикошета
                     }
                 });
 
+                // Проверяем на столкновение с ведром
                 if (
                     this.y + this.radius >= wagon.y &&
                     this.y - this.radius <= wagon.y + wagon.height &&
@@ -298,13 +326,12 @@
                         targetsHit++;
                         this.active = false;
                         updateUI();
-                        hitSound.play(); // Звук попадания
+                        hitSound.play(); // Проигрываем звук попадания
                         if (targetsHit >= 10) {
                             endRound();
                         }
                     } else {
                         this.vy = -this.vy;
-                        bounceSound.play(); // Звук отскока
                     }
                 }
             }
@@ -339,9 +366,9 @@
                 shell = new Shell(shellX, shellY, velocityY);
                 shotsLeft--;
                 updateUI();
-                shootSound.play(); // Звук выстрела
+                shootSound.play(); // Проигрываем звук выстрела
                 if (shotsLeft < 10 - targetsHit) {
-                    endGame("Out of balls! Try again!", true);
+                    endGame("Патроны закончились! Попробуйте снова.", true);
                 }
             }
         }
@@ -355,7 +382,7 @@
 
         function endRound() {
             clearInterval(timerInterval);
-            roundMessage.textContent = `Round ${round + 1}`;
+            roundMessage.textContent = `Раунд ${round + 1}`;
             roundMessage.style.display = 'block';
 
             setTimeout(() => {
@@ -374,7 +401,7 @@
                 wagon.increaseSpeed();
                 startTimer();
             } else {
-                endGame("Congrats! You are the winner of Dynamic Cannon!", false);
+                endGame("Поздравляем! Вы победили в игре Dynamic Cannon!", false);
             }
         }
 
@@ -385,7 +412,7 @@
                     updateUI();
                 } else {
                     clearInterval(timerInterval);
-                    endGame("Time's up! Try again!", true);
+                    endGame("Время вышло! Попробуйте снова.", true);
                 }
             }, 1000);
         }
@@ -422,6 +449,7 @@
                 new Beam(50, 20, 200, 10),
                 new Beam(canvas.width - 250, 20, 200, 10)
             ];
+            backgroundMusic.play(); // Проигрываем фоновую музыку
             startTimer();
             gameLoop();
         }
