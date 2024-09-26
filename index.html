@@ -5,9 +5,7 @@
     <title>Dynamic Cannon</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        /* Existing styles remain unchanged */
-
-        /* ... [Your existing CSS styles here] ... */
+        /* [Your existing CSS styles here] */
 
         /* Loading Screen Styles */
         #loadingMessage {
@@ -33,7 +31,7 @@
     <!-- Loading Screen -->
     <div id="loadingMessage">Loading... Please wait.</div>
 
-    <div id="gameContainer">
+    <div id="gameContainer" style="display: none;">
         <div id="gameField">
             <canvas id="gameCanvas"></canvas>
         </div>
@@ -58,6 +56,7 @@
         const shootButton = document.getElementById('shootButton');
         const roundMessage = document.getElementById('roundMessage');
         const loadingMessage = document.getElementById('loadingMessage');
+        const gameContainer = document.getElementById('gameContainer');
 
         let clouds = [];
         let cannon, wagon, shell = null;
@@ -83,34 +82,29 @@
         // Array of all audio files to preload
         const audioFiles = [backgroundMusic, shootSound, ricochetSound, hitSound];
 
-        let audioLoadedCount = 0;
-
         function preloadAudio() {
-            audioFiles.forEach(audio => {
-                audio.addEventListener('canplaythrough', onAudioLoaded, { once: true });
-                audio.addEventListener('error', onAudioError, { once: true });
-                // Start loading the audio
-                audio.load();
+            let promises = audioFiles.map(audio => {
+                return new Promise((resolve, reject) => {
+                    audio.addEventListener('canplaythrough', resolve, { once: true });
+                    audio.addEventListener('error', reject, { once: true });
+                    // Start loading the audio
+                    audio.load();
+                });
             });
-        }
 
-        function onAudioLoaded() {
-            audioLoadedCount++;
-            if (audioLoadedCount === audioFiles.length) {
-                // All audio files are loaded
-                loadingMessage.style.display = 'none';
-                init();
-            }
-        }
-
-        function onAudioError(e) {
-            console.error('Error loading audio:', e);
-            audioLoadedCount++;
-            if (audioLoadedCount === audioFiles.length) {
-                // Proceed even if some audio files failed to load
-                loadingMessage.style.display = 'none';
-                init();
-            }
+            Promise.all(promises)
+                .then(() => {
+                    // All audio files are loaded
+                    loadingMessage.style.display = 'none';
+                    gameContainer.style.display = 'flex';
+                    // Do not start the game yet; wait for user interaction
+                })
+                .catch((error) => {
+                    console.error('Error loading audio:', error);
+                    // Proceed even if some audio files failed to load
+                    loadingMessage.style.display = 'none';
+                    gameContainer.style.display = 'flex';
+                });
         }
 
         function createClouds() {
@@ -360,13 +354,12 @@
         }
 
         function shoot() {
-            if (shotsLeft > 0 && !shell) {
-                // Initialize audio on first interaction
-                if (!audioInitialized) {
-                    backgroundMusic.play().catch(error => console.log(error)); // Play background music
-                    audioInitialized = true;
-                }
+            if (!audioInitialized) {
+                init(); // Initialize the game on first shoot
+                audioInitialized = true;
+            }
 
+            if (shotsLeft > 0 && !shell) {
                 const shellX = cannon.x + cannon.width / 2;
                 const shellY = cannon.y;
                 const velocityY = -800;
@@ -462,6 +455,7 @@
             ];
             startTimer();
             gameLoop();
+            backgroundMusic.play().catch(error => console.log(error)); // Play background music
         }
 
         function gameLoop() {
