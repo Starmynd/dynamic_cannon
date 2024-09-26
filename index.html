@@ -139,6 +139,8 @@
         let cannon, wagon, shell = null;
         let shotsLeft = 20;
         let targetsHit = 0;
+        let timer = 90; // Таймер на 90 секунд
+        let timerInterval;
 
         function createClouds() {
             clouds = [];
@@ -200,11 +202,12 @@
             }
         }
 
-        // Класс для качающегося ведра
+        // Класс для качающегося ведра (трапеция)
         class Wagon {
             constructor() {
-                this.width = 80;
-                this.height = 50;
+                this.widthTop = 100; // Верхняя ширина ведра
+                this.widthBottom = 60; // Нижняя ширина ведра
+                this.height = 50; // Высота ведра
                 this.ropeLength = 150; // Длина веревки
                 this.amplitude = canvas.width / 3; // Амплитуда качания
                 this.speed = 2; // Скорость качания
@@ -213,7 +216,7 @@
 
             update(delta) {
                 this.angle += delta * this.speed;
-                this.x = canvas.width / 2 + Math.sin(this.angle) * this.amplitude - this.width / 2;
+                this.x = canvas.width / 2 + Math.sin(this.angle) * this.amplitude - this.widthTop / 2;
                 this.y = this.ropeLength;
             }
 
@@ -223,12 +226,18 @@
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.moveTo(canvas.width / 2, 0);
-                ctx.lineTo(this.x + this.width / 2, this.y);
+                ctx.lineTo(this.x + this.widthTop / 2, this.y);
                 ctx.stroke();
 
-                // Ведро
+                // Ведро (трапеция)
                 ctx.fillStyle = '#000000';
-                ctx.fillRect(this.x, this.y, this.width, this.height); // Ведро
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y); // Левый верхний угол
+                ctx.lineTo(this.x + this.widthTop, this.y); // Правый верхний угол
+                ctx.lineTo(this.x + this.widthBottom, this.y + this.height); // Правый нижний угол
+                ctx.lineTo(this.x + (this.widthTop - this.widthBottom), this.y + this.height); // Левый нижний угол
+                ctx.closePath();
+                ctx.fill();
             }
         }
 
@@ -249,7 +258,7 @@
                 this.y += this.vy * delta;
 
                 // Проверка столкновения с балками
-                if (this.y - this.radius <= 100 && !this.bounced) {
+                if (this.y - this.radius <= 20 && !this.bounced) { // Балки находятся почти у верхней границы
                     if ((this.x > 50 && this.x < 250) || (this.x > canvas.width - 250 && this.x < canvas.width - 50)) {
                         this.vy *= -1; // Отражение по вертикали
                         this.bounced = true; // Помечаем, что ядро отскочило от балки
@@ -257,7 +266,7 @@
                 }
 
                 // Проверка отражения от нижней части ведра
-                if (this.y + this.radius >= wagon.y && this.x >= wagon.x && this.x <= wagon.x + wagon.width) {
+                if (this.y + this.radius >= wagon.y && this.x >= wagon.x && this.x <= wagon.x + wagon.widthTop) {
                     this.vy *= -1; // Отражение ядра
                     if (this.bounced && this.y <= wagon.y + wagon.height / 2) {
                         targetsHit++; // Увеличиваем счет только если ядро отскочило от балки
@@ -272,7 +281,7 @@
             }
 
             draw() {
-                ctx.fillStyle = "#FFD700";
+                ctx.fillStyle = "#000000"; // Черный цвет ядра
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fill();
@@ -285,7 +294,7 @@
                 const shellX = cannon.x + cannon.width / 2;
                 const shellY = cannon.y;
                 const velocityX = cannon.direction * cannon.speed * 0.2; // Инерция от движения танка
-                const velocityY = -500; // Скорость вверх
+                const velocityY = -1500; // Увеличенная скорость вверх (в 3 раза больше)
                 shell = new Shell(shellX, shellY, velocityX, velocityY);
                 shotsLeft--;
                 updateUI();
@@ -296,6 +305,7 @@
         function updateUI() {
             shotsText.textContent = `Выстрелов: ${shotsLeft}`;
             scoreText.textContent = `Забито: ${targetsHit}/10`;
+            timerText.textContent = `Время: ${Math.ceil(timer)}`;
         }
 
         // Класс для балок
@@ -322,10 +332,25 @@
             cannon = new Cannon();
             wagon = new Wagon();
             beams = [
-                new Beam(50, 100, 200, 10), // Первая балка
-                new Beam(canvas.width - 250, 100, 200, 10) // Вторая балка
+                new Beam(50, 20, 200, 10), // Первая балка (у верхней границы)
+                new Beam(canvas.width - 250, 20, 200, 10) // Вторая балка (у верхней границы)
             ];
+            timerInterval = setInterval(() => {
+                if (timer > 0) {
+                    timer -= 1;
+                    updateUI();
+                } else {
+                    clearInterval(timerInterval);
+                    endGame();
+                }
+            }, 1000); // Таймер уменьшается каждую секунду
             gameLoop();
+        }
+
+        // Завершение игры
+        function endGame() {
+            gameOverMessage.textContent = "Время вышло! Игра окончена.";
+            gameOverScreen.style.display = "block";
         }
 
         // Игровой цикл
