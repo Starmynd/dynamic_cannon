@@ -208,9 +208,8 @@
                 this.widthBottom = 60; // Нижняя ширина ведра
                 this.height = 50; // Высота ведра
                 this.ropeY = 50; // Положение веревки
-                this.amplitude = canvas.width / 2; // Амплитуда движения ведра
-                this.speed = 2; // Скорость движения ведра
-                this.direction = 1; // Направление движения
+                this.speed = 100; // Скорость движения ведра
+                this.direction = 1;
                 this.x = canvas.width / 2 - this.widthTop / 2;
                 this.y = this.ropeY + 20; // Ведро ниже веревки
             }
@@ -243,7 +242,7 @@
             }
         }
 
-        // Класс для ядра
+        // Класс для снаряда (логика автоподачи, как у теннисного мяча)
         class Shell {
             constructor(x, y, vx, vy) {
                 this.radius = 10;
@@ -259,6 +258,11 @@
                 this.x += this.vx * delta;
                 this.y += this.vy * delta;
 
+                // Если снаряд выходит за экран, он удаляется
+                if (this.y > canvas.height || this.x < 0 || this.x > canvas.width) {
+                    this.active = false;
+                }
+
                 // Проверка столкновения с балками
                 if (this.y - this.radius <= 20 && !this.bounced) { // Балки находятся почти у верхней границы
                     if ((this.x > 50 && this.x < 250) || (this.x > canvas.width - 250 && this.x < canvas.width - 50)) {
@@ -267,18 +271,13 @@
                     }
                 }
 
-                // Проверка отражения от нижней части ведра
+                // Проверка столкновения с ведром
                 if (this.y + this.radius >= wagon.y && this.x >= wagon.x && this.x <= wagon.x + wagon.widthTop) {
-                    this.vy *= -1; // Отражение ядра
+                    this.vy *= -1; // Отражение ядра от нижней части ведра
                     if (this.bounced && this.y <= wagon.y + wagon.height / 2) {
-                        targetsHit++; // Увеличиваем счет только если ядро отскочило от балки
-                        this.active = false; // Снаряд исчезает после попадания
+                        targetsHit++; // Снаряд засчитывается, если отскочил от балки
+                        this.active = false; // Убираем снаряд
                     }
-                }
-
-                // Если снаряд вылетел за экран — он исчезает
-                if (this.y < 0 || this.y > canvas.height || this.x < 0 || this.x > canvas.width) {
-                    this.active = false;
                 }
             }
 
@@ -290,13 +289,13 @@
             }
         }
 
-        // Функция для стрельбы
+        // Функция для стрельбы (логика автоподачи)
         function shoot() {
             if (shotsLeft > 0 && !shell) {
                 const shellX = cannon.x + cannon.width / 2;
                 const shellY = cannon.y;
                 const velocityX = cannon.direction * cannon.speed * 0.2; // Инерция от движения танка
-                const velocityY = -1500; // Увеличенная скорость вверх (в 3 раза больше)
+                const velocityY = -1000; // Высокая вертикальная скорость
                 shell = new Shell(shellX, shellY, velocityX, velocityY);
                 shotsLeft--;
                 updateUI();
