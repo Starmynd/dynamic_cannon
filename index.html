@@ -92,6 +92,16 @@
             z-index: 3;
             border-radius: 10px;
         }
+
+        #explosion {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, yellow, orange, red);
+            border-radius: 50%;
+            display: none;
+            z-index: 4;
+        }
     </style>
 </head>
 <body>
@@ -103,11 +113,16 @@
             <div class="infoRow" id="roundInfo">Раунд: 1</div>
             <div class="infoRow" id="timer">Время: 90</div>
             <div class="infoRow" id="shots">Выстрелов: 20</div>
-            <div class="infoRow" id="score">Забито: 0/10</div>
+            <div class="infoRow" id="score">Очки: 0</div>
             <button id="shootButton">Выстрелить</button>
         </div>
         <div id="roundMessage">Round 2</div> <!-- Сообщение о новом раунде -->
+        <div id="explosion"></div> <!-- Вспышка взрыва -->
     </div>
+
+    <audio id="shootSound" src="shoot.mp3"></audio>
+    <audio id="hitSound" src="hit.mp3"></audio>
+    <audio id="backgroundMusic" src="background.mp3" loop></audio>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -119,81 +134,21 @@
         const scoreText = document.getElementById('score');
         const shootButton = document.getElementById('shootButton');
         const roundMessage = document.getElementById('roundMessage');
+        const explosion = document.getElementById('explosion');
 
-        let clouds = [];
+        const shootSound = document.getElementById('shootSound');
+        const hitSound = document.getElementById('hitSound');
+        const backgroundMusic = document.getElementById('backgroundMusic');
+
         let cannon, wagon, shell = null;
         let shotsLeft = 20;
-        let targetsHit = 0;
+        let score = 0;
         let timer = 90;
         let round = 1;
-        let beams = [];
+        let comboMultiplier = 1;
         let timerInterval;
 
-        function createClouds() {
-            clouds = [];
-            for (let i = 0; i < 5; i++) {
-                let cloud = {
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * 100,
-                    size: Math.random() * 40 + 30,
-                    speed: Math.random() * 0.5 + 0.2
-                };
-                clouds.push(cloud);
-            }
-        }
-
-        function drawClouds() {
-            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-            clouds.forEach(cloud => {
-                ctx.beginPath();
-                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
-
-        function updateClouds() {
-            clouds.forEach(cloud => {
-                cloud.x -= cloud.speed;
-                if (cloud.x < -cloud.size) {
-                    cloud.x = canvas.width + cloud.size;
-                    cloud.y = Math.random() * 100;
-                    cloud.size = Math.random() * 40 + 30;
-                    cloud.speed = Math.random() * 0.5 + 0.2;
-                }
-            });
-        }
-
-        function drawMountains() {
-            ctx.fillStyle = 'rgba(139, 69, 19, 1)';
-            ctx.beginPath();
-            ctx.moveTo(50, canvas.height);
-            ctx.lineTo(canvas.width * 0.25, canvas.height * 0.4);
-            ctx.lineTo(canvas.width * 0.5, canvas.height);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.75, canvas.height);
-            ctx.lineTo(canvas.width, canvas.height * 0.5);
-            ctx.lineTo(canvas.width, canvas.height);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.25, canvas.height * 0.4);
-            ctx.lineTo(canvas.width * 0.22, canvas.height * 0.5);
-            ctx.lineTo(canvas.width * 0.28, canvas.height * 0.5);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.9, canvas.height * 0.5);
-            ctx.lineTo(canvas.width * 0.88, canvas.height * 0.55);
-            ctx.lineTo(canvas.width * 0.92, canvas.height * 0.55);
-            ctx.closePath();
-            ctx.fill();
-        }
+        backgroundMusic.play();
 
         class Cannon {
             constructor() {
@@ -219,16 +174,6 @@
                 ctx.fillRect(this.x + this.width / 4, this.y - 20, this.width / 2, 20);
                 ctx.fillStyle = "#000000";
                 ctx.fillRect(this.x + this.width / 2 - 5, this.y - 40, 10, 30);
-                ctx.fillStyle = "#212121";
-                for (let i = 0; i < 4; i++) {
-                    ctx.beginPath();
-                    ctx.arc(this.x + 15 * i + 10, this.y + this.height + 5, 8, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-
-            increaseSpeed() {
-                this.speed *= 1.08;
             }
         }
 
@@ -236,11 +181,10 @@
             constructor() {
                 this.width = 100;
                 this.height = 50;
-                this.ropeY = canvas.height / 2;
+                this.x = canvas.width / 2 - this.width / 2;
+                this.y = 100;
                 this.speed = 150;
                 this.direction = -1;
-                this.x = canvas.width / 2 - this.width / 2;
-                this.y = this.ropeY + 15;
             }
 
             update(delta) {
@@ -251,28 +195,8 @@
             }
 
             draw() {
-                ctx.strokeStyle = '#8B4513';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(0, this.ropeY);
-                ctx.lineTo(canvas.width, this.ropeY);
-                ctx.stroke();
-
-                ctx.strokeStyle = '#8B4513';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(this.x + this.width / 2, this.ropeY);
-                ctx.lineTo(this.x + this.width / 2, this.y);
-                ctx.stroke();
-
                 ctx.fillStyle = '#FF69B4';
-                ctx.beginPath();
-                ctx.rect(this.x, this.y, this.width, this.height); // Обрабатываем как прямоугольник
-                ctx.fill();
-            }
-
-            increaseSpeed() {
-                this.speed *= 1.08;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
             }
         }
 
@@ -282,45 +206,27 @@
                 this.x = x;
                 this.y = y;
                 this.vy = vy;
-                this.speed = Math.abs(vy);
                 this.active = true;
-                this.bounced = false;
             }
 
             update(delta) {
                 this.y += this.vy * delta;
-
                 if (this.y < 0 || this.y > canvas.height) {
                     this.active = false;
                 }
 
-                beams.forEach(beam => {
-                    if (this.y - this.radius <= beam.y + beam.height &&
-                        this.y - this.radius >= beam.y &&
-                        this.x >= beam.x && this.x <= beam.x + beam.width) {
-                        this.vy = -this.vy;
-                        this.bounced = true;
-                        this.y = beam.y + beam.height + this.radius;
-                    }
-                });
-
-                // Проверяем на столкновение с ведром (как с прямоугольником)
+                // Попадание по вагонетке
                 if (
-                    this.y + this.radius >= wagon.y && // Нижняя часть ядра касается ведра
-                    this.y - this.radius <= wagon.y + wagon.height && // Верхняя часть ядра касается верхнего края ведра
-                    this.x >= wagon.x && // В пределах левого края ведра
-                    this.x <= wagon.x + wagon.width // В пределах правого края ведра
+                    this.y + this.radius >= wagon.y &&
+                    this.x >= wagon.x &&
+                    this.x <= wagon.x + wagon.width
                 ) {
-                    if (this.bounced) {
-                        targetsHit++;
-                        this.active = false;
-                        updateUI();
-                        if (targetsHit >= 10) {
-                            endRound();
-                        }
-                    } else {
-                        this.vy = -this.vy; // Отражаем от нижнего края
-                    }
+                    score += 100 * comboMultiplier;
+                    comboMultiplier++;
+                    updateUI();
+                    showExplosion(this.x, this.y);
+                    hitSound.play();
+                    this.active = false;
                 }
             }
 
@@ -332,20 +238,6 @@
             }
         }
 
-        class Beam {
-            constructor(x, y, width, height) {
-                this.x = x;
-                this.y = y;
-                this.width = width;
-                this.height = height;
-            }
-
-            draw() {
-                ctx.fillStyle = '#8B4513';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-            }
-        }
-
         function shoot() {
             if (shotsLeft > 0 && !shell) {
                 const shellX = cannon.x + cannon.width / 2;
@@ -353,43 +245,25 @@
                 const velocityY = -800;
                 shell = new Shell(shellX, shellY, velocityY);
                 shotsLeft--;
+                shootSound.play();
                 updateUI();
-                if (shotsLeft < 10 - targetsHit) {
-                    endGame("Out of balls! Try again!", true);
-                }
             }
         }
 
         function updateUI() {
             shotsText.textContent = `Выстрелов: ${shotsLeft}`;
-            scoreText.textContent = `Забито: ${targetsHit}/10`;
+            scoreText.textContent = `Очки: ${score}`;
             timerText.textContent = `Время: ${Math.ceil(timer)}`;
             roundInfo.textContent = `Раунд: ${round}`;
         }
 
-        function endRound() {
-            clearInterval(timerInterval);
-            roundMessage.textContent = `Round ${round + 1}`;
-            roundMessage.style.display = 'block';
-
+        function showExplosion(x, y) {
+            explosion.style.left = `${x - 50}px`;
+            explosion.style.top = `${y - 50}px`;
+            explosion.style.display = 'block';
             setTimeout(() => {
-                roundMessage.style.display = 'none';
-                nextRound();
-            }, 2000);
-        }
-
-        function nextRound() {
-            if (round < 10) {
-                round++;
-                targetsHit = 0;
-                shotsLeft = 20;
-                timer = 90;
-                cannon.increaseSpeed();
-                wagon.increaseSpeed();
-                startTimer();
-            } else {
-                endGame("Congrats! You are the winner of Dynamic Cannon!", false);
-            }
+                explosion.style.display = 'none';
+            }, 500);
         }
 
         function startTimer() {
@@ -399,90 +273,42 @@
                     updateUI();
                 } else {
                     clearInterval(timerInterval);
-                    endGame("Time's up! Try again!", true);
+                    endGame("Время вышло! Попробуй еще раз!", true);
                 }
             }, 1000);
         }
 
-        function endGame(message, restart) {
-            clearInterval(timerInterval);
-            roundMessage.textContent = message;
-            roundMessage.style.display = 'block';
-
-            if (restart) {
-                setTimeout(() => {
-                    resetGame();
-                }, 3000);
-            }
-        }
-
-        function resetGame() {
-            round = 1;
-            targetsHit = 0;
-            shotsLeft = 20;
-            timer = 90;
-            cannon.speed = 100;
-            wagon.speed = 150;
-            roundMessage.style.display = 'none';
-            startTimer();
-        }
-
         function init() {
-            resizeCanvas();
-            createClouds();
             cannon = new Cannon();
             wagon = new Wagon();
-            beams = [
-                new Beam(50, 20, 200, 10),
-                new Beam(canvas.width - 250, 20, 200, 10)
-            ];
             startTimer();
             gameLoop();
         }
 
         function gameLoop() {
             const delta = 1 / 60;
-            updateClouds();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             cannon.update(delta);
             wagon.update(delta);
+            cannon.draw();
+            wagon.draw();
             if (shell) {
                 shell.update(delta);
                 if (!shell.active) {
                     shell = null;
                 }
             }
-            draw();
+            if (shell) shell.draw();
             requestAnimationFrame(gameLoop);
         }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawMountains();
-            drawClouds();
-            cannon.draw();
-            wagon.draw();
-            beams.forEach(beam => beam.draw());
-            if (shell) shell.draw();
-        }
-
-        function resizeCanvas() {
-            const gameField = document.getElementById('gameField');
-            canvas.width = gameField.clientWidth;
-            canvas.height = gameField.clientHeight;
-        }
-
-        window.onload = function() {
-            resizeCanvas();
-            init();
-        };
 
         shootButton.addEventListener('click', function() {
             shoot();
         });
 
-        window.addEventListener('resize', function() {
-            resizeCanvas();
-        });
+        window.onload = function() {
+            init();
+        };
     </script>
 </body>
 </html>
