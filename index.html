@@ -157,7 +157,7 @@
     <!-- Welcome Screen -->
     <div id="welcomeScreen">
       <h1>Welcome to Dynamic Cannon</h1>
-      <p>Your mission is to score 10 points in each round by hitting the moving receiver from the top after bouncing off the upper beam. You have 90 seconds and 20 shots per round. Good luck!</p>
+      <p>Your mission is to score 10 points in each round by hitting the moving basket from the top after bouncing off the upper beam. You have 90 seconds and 20 shots per round. Good luck!</p>
       <button id="startButton">Start Game</button>
     </div>
     <!-- Round Announcement -->
@@ -291,24 +291,36 @@
         }
       }
       draw() {
-        // Draw receiver (funnel shape)
+        // Draw the basket (woven appearance)
         context.fillStyle = '#8B4513';
-        context.beginPath();
-        context.moveTo(this.x, this.y);
-        context.lineTo(this.x + this.width / 2, this.y - this.height * 0.5);
-        context.lineTo(this.x + this.width, this.y);
-        context.closePath();
-        context.fill();
-
-        // Draw basket body
         context.fillRect(this.x, this.y, this.width, this.height);
+
+        // Draw woven pattern
+        context.strokeStyle = '#654321';
+        context.lineWidth = 2;
+        for (let i = 0; i < this.width; i += 10) {
+          context.beginPath();
+          context.moveTo(this.x + i, this.y);
+          context.lineTo(this.x + i, this.y + this.height);
+          context.stroke();
+        }
+        for (let i = 0; i < this.height; i += 10) {
+          context.beginPath();
+          context.moveTo(this.x, this.y + i);
+          context.lineTo(this.x + this.width, this.y + i);
+          context.stroke();
+        }
+
+        // Draw basket rim
+        context.fillStyle = '#A0522D';
+        context.fillRect(this.x - this.width * 0.05, this.y - this.height * 0.1, this.width * 1.1, this.height * 0.1);
 
         // Draw support beam
         context.strokeStyle = '#000';
         context.lineWidth = 2;
         context.beginPath();
         context.moveTo(this.x + this.width / 2, upperBeam.y + upperBeam.height);
-        context.lineTo(this.x + this.width / 2, this.y - this.height * 0.5);
+        context.lineTo(this.x + this.width / 2, this.y - this.height * 0.1);
         context.stroke();
 
         // Draw lower beam
@@ -561,11 +573,21 @@
         shell.y = upperBeam.y + upperBeam.height + shell.radius;
       }
 
-      // Collision with the funnel (receiver) on top of the basket
-      let funnelTopY = wagon.y - wagon.height * 0.5;
-      if (shell.y + shell.radius >= funnelTopY && shell.y - shell.radius <= wagon.y && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
-        if (shell.speedY > 0 && shell.bouncedFromUpperBeam) {
-          // Successful hit
+      // Collision with basket bottom
+      if (shell.y + shell.radius >= wagon.y + wagon.height) {
+        if (shell.y - shell.radius <= wagon.y + wagon.height + canvas.height * 0.01 && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
+          // Bounce off the lower beam
+          shell.speedY *= -1;
+          shell.bounced = true;
+          shell.bouncedFromUpperBeam = false;
+          shell.y = wagon.y + wagon.height + canvas.height * 0.01 + shell.radius;
+        }
+      }
+
+      // Collision with the basket
+      if (shell.y + shell.radius >= wagon.y && shell.y - shell.radius <= wagon.y + wagon.height && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
+        if (shell.speedY > 0 && shell.bouncedFromUpperBeam && shell.y - shell.radius <= wagon.y) {
+          // Successful hit from the top
           score++;
           updateGameInfo();
           shell.active = false;
@@ -574,10 +596,16 @@
           if (score % 10 === 0 && score !== 0) {
             nextRound();
           }
-        } else {
-          // Missed or hit from below, shell disappears
+        } else if (shell.speedY > 0) {
+          // Hit the side of the basket, shell disappears
           shell.active = false;
           shellOnScreen = false;
+        } else if (shell.speedY < 0) {
+          // Bounce off the bottom or inside the basket
+          shell.speedY *= -1;
+          shell.bounced = true;
+          shell.bouncedFromUpperBeam = false;
+          shell.y = wagon.y + wagon.height + shell.radius;
         }
       }
     }
