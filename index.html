@@ -207,9 +207,9 @@
     function resizeCanvas() {
       const container = document.getElementById('gameContainer');
       canvas.width = window.innerWidth - 10; // Adjusted for border
-      canvas.height = window.innerHeight - 80; // Adjusted for border and button height
+      canvas.height = window.innerHeight - shootButton.offsetHeight - 10; // Adjusted for border and button height
       container.style.width = canvas.width + 'px';
-      container.style.height = (canvas.height + 70) + 'px'; // Including button height
+      container.style.height = (canvas.height + shootButton.offsetHeight) + 'px'; // Including button height
 
       adjustPositions();
     }
@@ -224,16 +224,22 @@
       }
       // Adjust the position of the cannon
       if (cannon) {
-        cannon.y = canvas.height - cannon.height - shootButton.offsetHeight;
+        cannon.y = canvas.height - cannon.height;
+      }
+      // Adjust the position of the buildings
+      if (cityBuildings.length > 0) {
+        cityBuildings.forEach(building => {
+          building.y = canvas.height - building.height;
+        });
       }
     }
 
     class Cannon {
       constructor() {
         this.width = canvas.width * 0.08;
-        this.height = canvas.height * 0.05;
+        this.height = canvas.height * 0.03; // Reduced height
         this.x = (canvas.width - this.width) / 2;
-        this.y = canvas.height - this.height - shootButton.offsetHeight;
+        this.y = canvas.height - this.height;
         this.baseSpeed = canvas.width * 0.003;
         this.speed = this.baseSpeed;
         this.direction = 1;
@@ -400,26 +406,25 @@
         this.x = x;
         this.width = width;
         this.height = height;
-        this.y = canvas.height - shootButton.offsetHeight - this.height;
+        this.y = canvas.height - height;
       }
       draw() {
-        context.fillStyle = '#555';
-        // Isometric effect
-        context.save();
-        context.translate(this.x + this.width / 2, this.y + this.height);
-        context.scale(1, 0.5);
-        context.rotate(-Math.PI / 4);
-        context.fillRect(-this.width / 2, -this.height, this.width, this.height);
-        context.restore();
+        context.fillStyle = '#FFF'; // White buildings
+        context.fillRect(this.x, this.y, this.width, this.height);
 
-        // Windows stripes
-        context.strokeStyle = '#FFD700';
-        context.lineWidth = 1;
-        for (let i = 0; i < this.height / 10; i++) {
-          context.beginPath();
-          context.moveTo(this.x, this.y + i * 10);
-          context.lineTo(this.x + this.width, this.y + i * 10);
-          context.stroke();
+        // Windows
+        context.fillStyle = '#000';
+        let windowRows = Math.floor(this.height / 20);
+        let windowCols = Math.floor(this.width / 15);
+        for (let i = 0; i < windowRows; i++) {
+          for (let j = 0; j < windowCols; j++) {
+            context.fillRect(
+              this.x + j * 15 + 5,
+              this.y + i * 20 + 5,
+              5,
+              10
+            );
+          }
         }
       }
     }
@@ -459,7 +464,7 @@
       for (let i = 0; i < numberOfBuildings; i++) {
         let x = (i + 1) * buildingWidth;
         let width = buildingWidth * 0.8;
-        let height = canvas.height * 0.15 + Math.random() * canvas.height * 0.1;
+        let height = canvas.height * 0.2 + Math.random() * canvas.height * 0.1;
         cityBuildings.push(new Building(x, width, height));
       }
 
