@@ -188,7 +188,8 @@
 
     let shells = [];
     let clouds = [];
-    let mountains = [];
+    let airplanes = [];
+    let cityBuildings = [];
 
     let shotsLeft;
     let score;
@@ -201,6 +202,7 @@
     let gamePaused = false;
 
     let gameTimer;
+    let airplaneTimer;
 
     function resizeCanvas() {
       const container = document.getElementById('gameContainer');
@@ -218,7 +220,7 @@
     function adjustPositions() {
       // Adjust the position of the upper beam
       if (upperBeam) {
-        upperBeam.y = document.getElementById('gameInfo').offsetHeight;
+        upperBeam.y = document.getElementById('gameInfo').offsetHeight + canvas.height * 0.1;
       }
       // Adjust the position of the cannon
       if (cannon) {
@@ -328,7 +330,7 @@
         this.width = canvas.width * 0.8;
         this.height = canvas.height * 0.01;
         this.x = (canvas.width - this.width) / 2;
-        this.y = document.getElementById('gameInfo').offsetHeight; // Start below the interface
+        this.y = document.getElementById('gameInfo').offsetHeight + canvas.height * 0.1;
       }
       draw() {
         context.fillStyle = '#555';
@@ -361,29 +363,53 @@
       }
     }
 
-    class Mountain {
-      constructor(x, y, width, height) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
+    class Airplane {
+      constructor() {
+        this.width = canvas.width * 0.04;
+        this.height = canvas.height * 0.03;
+        this.x = -this.width;
+        this.y = upperBeam.y + Math.random() * (canvas.height * 0.3);
+        this.speed = canvas.width * 0.0015;
+        this.active = true;
+      }
+      update() {
+        this.x += this.speed;
+        if (this.x > canvas.width) {
+          this.active = false;
+        }
       }
       draw() {
-        context.fillStyle = '#A0522D';
+        context.fillStyle = '#FF0000';
+        context.fillRect(this.x, this.y, this.width, this.height / 2);
         context.beginPath();
-        context.moveTo(this.x, this.y);
-        context.lineTo(this.x + this.width / 2, this.y - this.height);
-        context.lineTo(this.x + this.width, this.y);
+        context.moveTo(this.x + this.width / 2, this.y - this.height / 2);
+        context.lineTo(this.x + this.width, this.y + this.height / 2);
+        context.lineTo(this.x, this.y + this.height / 2);
         context.closePath();
         context.fill();
+      }
+    }
 
-        context.fillStyle = '#FFF';
-        context.beginPath();
-        context.moveTo(this.x + this.width / 2, this.y - this.height);
-        context.lineTo(this.x + this.width * 0.6, this.y - this.height * 0.8);
-        context.lineTo(this.x + this.width * 0.4, this.y - this.height * 0.8);
-        context.closePath();
-        context.fill();
+    class Building {
+      constructor(x, width, height) {
+        this.x = x;
+        this.width = width;
+        this.height = height;
+        this.y = canvas.height - shootButton.offsetHeight - this.height;
+      }
+      draw() {
+        context.fillStyle = '#333';
+        context.fillRect(this.x, this.y, this.width, this.height);
+
+        // Windows
+        context.fillStyle = '#FFD700';
+        for (let i = 0; i < this.height / 20; i++) {
+          for (let j = 0; j < this.width / 15; j++) {
+            if (Math.random() > 0.5) {
+              context.fillRect(this.x + j * 15 + 5, this.y + i * 20 + 5, 5, 10);
+            }
+          }
+        }
       }
     }
 
@@ -397,6 +423,7 @@
       shellOnScreen = false;
       gamePaused = false;
       shells = [];
+      airplanes = [];
 
       // Initialize game elements
       upperBeam = new Beam();
@@ -414,15 +441,28 @@
         clouds.push(new Cloud(x, y, scale, speed));
       }
 
-      mountains = [];
-      let mountainWidth = canvas.width / 4;
-      let mountainHeight = canvas.height / 3;
-      mountains.push(new Mountain(canvas.width * 0.1, canvas.height, mountainWidth, mountainHeight));
-      mountains.push(new Mountain(canvas.width * 0.4, canvas.height, mountainWidth, mountainHeight * 1.2));
-      mountains.push(new Mountain(canvas.width * 0.7, canvas.height, mountainWidth, mountainHeight * 0.8));
+      // Create city skyline
+      cityBuildings = [];
+      let numberOfBuildings = 10;
+      let buildingWidth = canvas.width / numberOfBuildings;
+      for (let i = 0; i < numberOfBuildings; i++) {
+        let x = i * buildingWidth;
+        let width = buildingWidth;
+        let height = canvas.height * 0.2 + Math.random() * canvas.height * 0.2;
+        cityBuildings.push(new Building(x, width, height));
+      }
 
       updateGameInfo();
       startRound();
+      startAirplanes();
+    }
+
+    function startAirplanes() {
+      airplaneTimer = setInterval(() => {
+        if (!gamePaused) {
+          airplanes.push(new Airplane());
+        }
+      }, 20000); // Every 20 seconds
     }
 
     function startRound() {
@@ -571,11 +611,18 @@
 
       context.clearRect(0, 0, canvas.width, canvas.height);
 
-      mountains.forEach(mountain => mountain.draw());
+      // Draw city skyline
+      cityBuildings.forEach(building => building.draw());
 
       clouds.forEach(cloud => {
         if (!gamePaused) cloud.update();
         cloud.draw();
+      });
+
+      airplanes.forEach((plane, index) => {
+        if (!gamePaused) plane.update();
+        plane.draw();
+        if (!plane.active) airplanes.splice(index, 1);
       });
 
       upperBeam.draw();
@@ -618,6 +665,8 @@
         gameOverScreen.querySelector('h1').textContent = 'Game Over';
         gameOverScreen.querySelector('p').textContent = 'You did not reach the target. Try again!';
       }
+      clearInterval(gameTimer);
+      clearInterval(airplaneTimer);
     }
 
     function hideGameOverScreen() {
