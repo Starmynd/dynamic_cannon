@@ -144,16 +144,25 @@
     #restartButton:active {
       background-color: #45a049;
     }
+    /* Attribution */
+    #attribution {
+      position: absolute;
+      bottom: 80px;
+      width: 100%;
+      text-align: center;
+      font-size: 0.8em;
+      color: #fff;
+    }
   </style>
 </head>
 <body>
   <div id="gameContainer">
     <canvas id="gameCanvas"></canvas>
     <div id="gameInfo">
-      <div id="leftInfo">Round: 1 | Time: 90</div>
-      <div id="rightInfo">Shots: 20 | Score: 0</div>
+      <div id="leftInfo">Раунд: 1 | Время: 90</div>
+      <div id="rightInfo">Выстрелы: 20 | Очки: 0</div>
     </div>
-    <button id="shootButton">Shoot</button>
+    <button id="shootButton">Стрелять</button>
     <!-- Welcome Screen -->
     <div id="welcomeScreen">
       <h1>Добро пожаловать в Dynamic Cannon</h1>
@@ -168,9 +177,13 @@
       <p>Вы не достигли цели. Попробуйте снова!</p>
       <button id="restartButton">Перезапустить игру</button>
     </div>
+    <!-- Attribution -->
+    <div id="attribution">
+      Музыка: "Battle of Kings" от Per Kiilstofte (https://machinimasound.com), лицензия CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+    </div>
   </div>
   <!-- Background music -->
-  <audio id="backgroundMusic" src="https://www.bensound.com/bensound-music/bensound-buddy.mp3" loop></audio>
+  <audio id="backgroundMusic" src="background_music.mp3" loop></audio>
   <!-- Shooting sound effect -->
   <audio id="shootingSound" src="shooting_sound.mp3"></audio>
   <script>
@@ -531,8 +544,8 @@
     }
 
     function updateGameInfo() {
-      document.getElementById('leftInfo').textContent = `Round: ${round} | Time: ${timeLeft}`;
-      document.getElementById('rightInfo').textContent = `Shots: ${shotsLeft} | Score: ${score % 10}`;
+      document.getElementById('leftInfo').textContent = `Раунд: ${round} | Время: ${timeLeft}`;
+      document.getElementById('rightInfo').textContent = `Выстрелы: ${shotsLeft} | Очки: ${score % 10}`;
     }
 
     function shoot() {
@@ -726,7 +739,7 @@
       gameLoop();
       // Start background music
       const bgMusic = document.getElementById('backgroundMusic');
-      bgMusic.volume = 0.1;
+      bgMusic.volume = 0.05; // Уменьшена громкость
       bgMusic.play();
     }
 
