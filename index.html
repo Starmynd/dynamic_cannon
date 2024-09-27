@@ -157,7 +157,7 @@
     <!-- Welcome Screen -->
     <div id="welcomeScreen">
       <h1>Welcome to Dynamic Cannon</h1>
-      <p>Your mission is to score 10 points in each round by hitting the moving basket from the top after bouncing off the upper beam. You have 90 seconds and 20 shots per round. Good luck!</p>
+      <p>Your mission is to score 10 points in each round by hitting the moving receiver from the top after bouncing off the upper beam. You have 90 seconds and 20 shots per round. Good luck!</p>
       <button id="startButton">Start Game</button>
     </div>
     <!-- Round Announcement -->
@@ -291,16 +291,27 @@
         }
       }
       draw() {
+        // Draw receiver (funnel shape)
+        context.fillStyle = '#8B4513';
+        context.beginPath();
+        context.moveTo(this.x, this.y);
+        context.lineTo(this.x + this.width / 2, this.y - this.height * 0.5);
+        context.lineTo(this.x + this.width, this.y);
+        context.closePath();
+        context.fill();
+
+        // Draw basket body
+        context.fillRect(this.x, this.y, this.width, this.height);
+
+        // Draw support beam
         context.strokeStyle = '#000';
         context.lineWidth = 2;
         context.beginPath();
         context.moveTo(this.x + this.width / 2, upperBeam.y + upperBeam.height);
-        context.lineTo(this.x + this.width / 2, this.y);
+        context.lineTo(this.x + this.width / 2, this.y - this.height * 0.5);
         context.stroke();
 
-        context.fillStyle = '#8B4513';
-        context.fillRect(this.x, this.y, this.width, this.height);
-
+        // Draw lower beam
         context.fillStyle = '#555';
         context.fillRect(this.x, this.y + this.height, this.width, canvas.height * 0.01);
       }
@@ -333,9 +344,9 @@
 
     class Beam {
       constructor() {
-        this.width = canvas.width * 0.8;
+        this.width = canvas.width; // Full width
         this.height = canvas.height * 0.01;
-        this.x = (canvas.width - this.width) / 2;
+        this.x = 0; // Start from left edge
         this.y = document.getElementById('gameInfo').offsetHeight + canvas.height * 0.1;
       }
       draw() {
@@ -550,18 +561,9 @@
         shell.y = upperBeam.y + upperBeam.height + shell.radius;
       }
 
-      // Collision with lower beam of the wagon
-      let lowerBeamY = wagon.y + wagon.height;
-      let lowerBeamHeight = canvas.height * 0.01;
-      if (!shell.bounced && shell.y - shell.radius <= lowerBeamY + lowerBeamHeight && shell.y + shell.radius >= lowerBeamY && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
-        shell.speedY *= -1;
-        shell.bounced = true;
-        shell.bouncedFromUpperBeam = false;
-        shell.y = lowerBeamY + lowerBeamHeight + shell.radius;
-      }
-
-      // Collision with the wagon
-      if (shell.y + shell.radius >= wagon.y && shell.y - shell.radius <= wagon.y + wagon.height && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
+      // Collision with the funnel (receiver) on top of the basket
+      let funnelTopY = wagon.y - wagon.height * 0.5;
+      if (shell.y + shell.radius >= funnelTopY && shell.y - shell.radius <= wagon.y && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
         if (shell.speedY > 0 && shell.bouncedFromUpperBeam) {
           // Successful hit
           score++;
@@ -572,14 +574,8 @@
           if (score % 10 === 0 && score !== 0) {
             nextRound();
           }
-        } else if (shell.speedY < 0) {
-          // Bounce off the bottom
-          shell.speedY *= -1;
-          shell.bounced = true;
-          shell.bouncedFromUpperBeam = false;
-          shell.y = wagon.y + wagon.height + shell.radius;
         } else {
-          // If shell didn't bounce from upper beam, it disappears
+          // Missed or hit from below, shell disappears
           shell.active = false;
           shellOnScreen = false;
         }
