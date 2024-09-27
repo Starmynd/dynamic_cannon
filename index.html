@@ -92,16 +92,6 @@
             z-index: 3;
             border-radius: 10px;
         }
-
-        #explosion {
-            position: absolute;
-            width: 100px;
-            height: 100px;
-            background: radial-gradient(circle, yellow, orange, red);
-            border-radius: 50%;
-            display: none;
-            z-index: 4;
-        }
     </style>
 </head>
 <body>
@@ -117,12 +107,7 @@
             <button id="shootButton">Выстрелить</button>
         </div>
         <div id="roundMessage">Round 2</div> <!-- Сообщение о новом раунде -->
-        <div id="explosion"></div> <!-- Вспышка взрыва -->
     </div>
-
-    <audio id="shootSound" src="shoot.mp3"></audio>
-    <audio id="hitSound" src="hit.mp3"></audio>
-    <audio id="backgroundMusic" src="background.mp3" loop></audio>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -134,29 +119,21 @@
         const scoreText = document.getElementById('score');
         const shootButton = document.getElementById('shootButton');
         const roundMessage = document.getElementById('roundMessage');
-        const explosion = document.getElementById('explosion');
-
-        const shootSound = document.getElementById('shootSound');
-        const hitSound = document.getElementById('hitSound');
-        const backgroundMusic = document.getElementById('backgroundMusic');
 
         let cannon, wagon, shell = null;
         let shotsLeft = 20;
         let score = 0;
         let timer = 90;
         let round = 1;
-        let comboMultiplier = 1;
         let timerInterval;
-
-        backgroundMusic.play();
 
         class Cannon {
             constructor() {
-                this.width = 60;
-                this.height = 40;
+                this.width = canvas.width * 0.08; // Пропорция ширины
+                this.height = canvas.height * 0.05; // Пропорция высоты
                 this.x = canvas.width / 2 - this.width / 2;
                 this.y = canvas.height - this.height - 5;
-                this.speed = 100;
+                this.speed = canvas.width * 0.15; // Скорость пропорциональна ширине
                 this.direction = 1;
             }
 
@@ -171,19 +148,19 @@
                 ctx.fillStyle = "#1E3A8A";
                 ctx.fillRect(this.x, this.y, this.width, this.height);
                 ctx.fillStyle = "#3949AB";
-                ctx.fillRect(this.x + this.width / 4, this.y - 20, this.width / 2, 20);
+                ctx.fillRect(this.x + this.width / 4, this.y - this.height * 0.4, this.width / 2, this.height * 0.4);
                 ctx.fillStyle = "#000000";
-                ctx.fillRect(this.x + this.width / 2 - 5, this.y - 40, 10, 30);
+                ctx.fillRect(this.x + this.width / 2 - 5, this.y - this.height, 10, this.height * 0.75);
             }
         }
 
         class Wagon {
             constructor() {
-                this.width = 100;
-                this.height = 50;
+                this.width = canvas.width * 0.15; // Пропорция ширины
+                this.height = canvas.height * 0.05; // Пропорция высоты
                 this.x = canvas.width / 2 - this.width / 2;
                 this.y = 100;
-                this.speed = 150;
+                this.speed = canvas.width * 0.1; // Скорость пропорциональна ширине
                 this.direction = -1;
             }
 
@@ -202,7 +179,7 @@
 
         class Shell {
             constructor(x, y, vy) {
-                this.radius = 10;
+                this.radius = canvas.width * 0.015; // Пропорция радиуса
                 this.x = x;
                 this.y = y;
                 this.vy = vy;
@@ -221,11 +198,8 @@
                     this.x >= wagon.x &&
                     this.x <= wagon.x + wagon.width
                 ) {
-                    score += 100 * comboMultiplier;
-                    comboMultiplier++;
+                    score += 100;
                     updateUI();
-                    showExplosion(this.x, this.y);
-                    hitSound.play();
                     this.active = false;
                 }
             }
@@ -245,7 +219,6 @@
                 const velocityY = -800;
                 shell = new Shell(shellX, shellY, velocityY);
                 shotsLeft--;
-                shootSound.play();
                 updateUI();
             }
         }
@@ -255,15 +228,6 @@
             scoreText.textContent = `Очки: ${score}`;
             timerText.textContent = `Время: ${Math.ceil(timer)}`;
             roundInfo.textContent = `Раунд: ${round}`;
-        }
-
-        function showExplosion(x, y) {
-            explosion.style.left = `${x - 50}px`;
-            explosion.style.top = `${y - 50}px`;
-            explosion.style.display = 'block';
-            setTimeout(() => {
-                explosion.style.display = 'none';
-            }, 500);
         }
 
         function startTimer() {
@@ -278,7 +242,29 @@
             }, 1000);
         }
 
+        function endGame(message, restart) {
+            clearInterval(timerInterval);
+            roundMessage.textContent = message;
+            roundMessage.style.display = 'block';
+
+            if (restart) {
+                setTimeout(() => {
+                    resetGame();
+                }, 3000);
+            }
+        }
+
+        function resetGame() {
+            round = 1;
+            score = 0;
+            shotsLeft = 20;
+            timer = 90;
+            roundMessage.style.display = 'none';
+            startTimer();
+        }
+
         function init() {
+            resizeCanvas();
             cannon = new Cannon();
             wagon = new Wagon();
             startTimer();
@@ -294,21 +280,4 @@
             wagon.draw();
             if (shell) {
                 shell.update(delta);
-                if (!shell.active) {
-                    shell = null;
-                }
-            }
-            if (shell) shell.draw();
-            requestAnimationFrame(gameLoop);
-        }
-
-        shootButton.addEventListener('click', function() {
-            shoot();
-        });
-
-        window.onload = function() {
-            init();
-        };
-    </script>
-</body>
-</html>
+                if (!shell.active)
