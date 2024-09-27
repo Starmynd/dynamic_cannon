@@ -1,455 +1,399 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>Dynamic Cannon</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #6dbbe3;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: Arial, sans-serif;
-        }
-
-        #gameContainer {
-            width: 100%;
-            height: 100%;
-            max-width: 720px;
-            max-height: 1280px;
-            background: #f0f0f0;
-            position: relative;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        #gameField {
-            width: 100%;
-            height: 80%;
-            background: #87cefa;
-            position: relative;
-            border: 5px solid #000;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            z-index: 2;
-        }
-
-        #ui {
-            width: 100%;
-            height: 20%;
-            background: rgba(51, 51, 51, 0.8);
-            color: white;
-            padding: 10px;
-            box-sizing: border-box;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .infoRow {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            font-size: 22px;
-            margin-bottom: 10px;
-        }
-
-        #shootButton {
-            width: 100%;
-            padding: 15px;
-            font-size: 22px;
-            border: none;
-            background: #4CAF50;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        #roundMessage {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 30px;
-            font-size: 24px;
-            text-align: center;
-            display: none;
-            z-index: 3;
-            border-radius: 10px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Dynamic Cannon</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    #gameCanvas {
+      display: block;
+      background: #87CEEB; /* Небесно-голубой фон */
+    }
+    #gameInfo {
+      position: absolute;
+      bottom: 50px; /* Над кнопкой "Shoot" */
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 10px;
+      font-size: 18px;
+      font-family: sans-serif;
+      color: #000;
+    }
+    #shootButton {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 50px;
+      font-size: 24px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      outline: none;
+      cursor: pointer;
+    }
+    #shootButton:active {
+      background-color: #45a049;
+    }
+  </style>
 </head>
 <body>
-    <div id="gameContainer">
-        <div id="gameField">
-            <canvas id="gameCanvas"></canvas>
-        </div>
-        <div id="ui">
-            <div class="infoRow">
-                <div id="roundTime">
-                    <span id="round" style="margin-right: 20px;">Round: 1</span>
-                    <span id="time">Time: 90</span>
-                </div>
-                <div id="shotsScore">
-                    <span id="shots" style="margin-right: 20px;">Shots: 20</span>
-                    <span id="score">Score: 0</span>
-                </div>
-            </div>
-            <button id="shootButton">Shoot</button>
-        </div>
-        <div id="roundMessage">Round 2</div> <!-- Сообщение о новом раунде -->
-    </div>
+  <canvas id="gameCanvas"></canvas>
+  <div id="gameInfo">
+    <div id="leftInfo">Раунд: 1 | Время: 90</div>
+    <div id="rightInfo">Выстрелы: 20 | Счет: 0</div>
+  </div>
+  <button id="shootButton">Shoot</button>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const context = canvas.getContext('2d');
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight - 50; // Учитываем высоту кнопки
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
-        const roundText = document.getElementById('round');
-        const timeText = document.getElementById('time');
-        const shotsText = document.getElementById('shots');
-        const scoreText = document.getElementById('score');
-        const shootButton = document.getElementById('shootButton');
-        const roundMessage = document.getElementById('roundMessage');
-
-        let clouds = [];
-        let cannon, wagon, shell = null;
-        let shotsLeft = 20;
-        let score = 0;
-        let timer = 90;
-        let round = 1;
-        let beams = [];
-        let timerInterval;
-        const maxScore = 10; // Максимальное количество очков для завершения уровня
-
-        // Создаем облака
-        function createClouds() {
-            clouds = [];
-            for (let i = 0; i < 5; i++) {
-                let cloud = {
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * 100,
-                    size: Math.random() * 40 + 30,
-                    speed: Math.random() * 0.5 + 0.2
-                };
-                clouds.push(cloud);
-            }
+    class Cannon {
+      constructor() {
+        this.width = canvas.width * 0.08;
+        this.height = canvas.height * 0.05;
+        this.x = (canvas.width - this.width) / 2;
+        this.y = canvas.height - this.height;
+        this.speed = canvas.width * 0.003; // Скорость пропорциональна ширине экрана
+        this.direction = 1; // 1 - вправо, -1 - влево
+      }
+      update() {
+        this.x += this.speed * this.direction;
+        if (this.x <= 0) {
+          this.x = 0;
+          this.direction *= -1;
         }
-
-        function drawClouds() {
-            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-            clouds.forEach(cloud => {
-                ctx.beginPath();
-                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
+        if (this.x + this.width >= canvas.width) {
+          this.x = canvas.width - this.width;
+          this.direction *= -1;
         }
+      }
+      draw() {
+        context.fillStyle = '#000';
+        context.fillRect(this.x, this.y, this.width, this.height);
+        // Рисуем ствол пушки
+        context.fillRect(this.x + this.width / 2 - this.width * 0.05, this.y - this.height * 0.5, this.width * 0.1, this.height * 0.5);
+      }
+    }
 
-        function updateClouds() {
-            clouds.forEach(cloud => {
-                cloud.x -= cloud.speed;
-                if (cloud.x < -cloud.size) {
-                    cloud.x = canvas.width + cloud.size;
-                    cloud.y = Math.random() * 100;
-                    cloud.size = Math.random() * 40 + 30;
-                    cloud.speed = Math.random() * 0.5 + 0.2;
-                }
-            });
+    class Wagon {
+      constructor() {
+        this.width = canvas.width * 0.15;
+        this.height = canvas.height * 0.05;
+        this.x = (canvas.width - this.width) / 2;
+        this.y = canvas.height * 0.55;
+        this.speed = canvas.width * 0.002; // Скорость пропорциональна ширине экрана
+        this.direction = 1; // 1 - вправо, -1 - влево
+      }
+      update() {
+        this.x += this.speed * this.direction;
+        if (this.x <= 0) {
+          this.x = 0;
+          this.direction *= -1;
         }
-
-        // Рисуем горы
-        function drawMountains() {
-            ctx.fillStyle = 'rgba(139, 69, 19, 1)';
-            ctx.beginPath();
-            ctx.moveTo(50, canvas.height);
-            ctx.lineTo(canvas.width * 0.25, canvas.height * 0.4);
-            ctx.lineTo(canvas.width * 0.5, canvas.height);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.75, canvas.height);
-            ctx.lineTo(canvas.width, canvas.height * 0.5);
-            ctx.lineTo(canvas.width, canvas.height);
-            ctx.closePath();
-            ctx.fill();
-
-            // Белые "шапки" на горах
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.25, canvas.height * 0.4);
-            ctx.lineTo(canvas.width * 0.22, canvas.height * 0.5);
-            ctx.lineTo(canvas.width * 0.28, canvas.height * 0.5);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(canvas.width * 0.9, canvas.height * 0.5);
-            ctx.lineTo(canvas.width * 0.88, canvas.height * 0.55);
-            ctx.lineTo(canvas.width * 0.92, canvas.height * 0.55);
-            ctx.closePath();
-            ctx.fill();
+        if (this.x + this.width >= canvas.width) {
+          this.x = canvas.width - this.width;
+          this.direction *= -1;
         }
+      }
+      draw() {
+        // Рисуем крепление к тросу
+        context.strokeStyle = '#000';
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(this.x + this.width / 2, 0);
+        context.lineTo(this.x + this.width / 2, this.y);
+        context.stroke();
 
-        class Cannon {
-            constructor() {
-                this.width = canvas.width * 0.08; // Пропорция ширины
-                this.height = canvas.height * 0.05; // Пропорция высоты
-                this.x = canvas.width / 2 - this.width / 2;
-                this.y = canvas.height - this.height - 5;
-                this.speed = canvas.width * 0.15; // Скорость пропорциональна ширине
-                this.direction = 1;
-            }
+        // Рисуем корзину
+        context.fillStyle = '#8B4513'; // Коричневый цвет
+        context.fillRect(this.x, this.y, this.width, this.height);
 
-            update(delta) {
-                this.x += this.direction * this.speed * delta;
-                if (this.x > canvas.width - this.width || this.x < 0) {
-                    this.direction *= -1;
-                }
-            }
+        // Рисуем нижнюю балку
+        context.fillStyle = '#555';
+        context.fillRect(this.x, this.y + this.height, this.width, canvas.height * 0.01);
+      }
+    }
 
-            draw() {
-                ctx.fillStyle = "#1E3A8A";
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-                ctx.fillStyle = "#3949AB";
-                ctx.fillRect(this.x + this.width / 4, this.y - this.height * 0.4, this.width / 2, this.height * 0.4);
-                ctx.fillStyle = "#000000";
-                ctx.fillRect(this.x + this.width / 2 - 5, this.y - this.height, 10, this.height * 0.75);
-            }
+    class Shell {
+      constructor(x, y) {
+        this.radius = canvas.width * 0.015;
+        this.x = x;
+        this.y = y;
+        this.speedY = -canvas.height * 0.008;
+        this.bounced = false;
+        this.active = true;
+      }
+      update() {
+        this.y += this.speedY;
+        if (this.y + this.radius * 2 < 0 || this.y - this.radius > canvas.height) {
+          this.active = false;
         }
+      }
+      draw() {
+        context.fillStyle = '#000';
+        context.beginPath();
+        context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        context.fill();
+      }
+    }
 
-        class Wagon {
-            constructor() {
-                this.width = canvas.width * 0.15; // Пропорция ширины
-                this.height = canvas.height * 0.05; // Пропорция высоты
-                this.x = canvas.width / 2 - this.width / 2;
-                this.y = canvas.height * 0.55; // Веревка чуть выше середины экрана
-                this.speed = canvas.width * 0.1; // Скорость пропорциональна ширине
-                this.direction = -1;
-            }
+    class Beam {
+      constructor() {
+        this.width = canvas.width * 0.8;
+        this.height = canvas.height * 0.01;
+        this.x = (canvas.width - this.width) / 2;
+        this.y = canvas.height * 0.1;
+      }
+      draw() {
+        context.fillStyle = '#555';
+        context.fillRect(this.x, this.y, this.width, this.height);
+      }
+    }
 
-            update(delta) {
-                this.x += this.direction * this.speed * delta;
-                if (this.x > canvas.width - this.width || this.x < 0) {
-                    this.direction *= -1;
-                }
-            }
-
-            draw() {
-                ctx.strokeStyle = '#8B4513'; // Трос
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(0, this.y - 10); // Линия троса
-                ctx.lineTo(canvas.width, this.y - 10);
-                ctx.stroke();
-
-                ctx.strokeStyle = '#8B4513'; // Крепление вагонетки
-                ctx.beginPath();
-                ctx.moveTo(this.x + this.width / 2, this.y - 10);
-                ctx.lineTo(this.x + this.width / 2, this.y);
-                ctx.stroke();
-
-                ctx.fillStyle = '#FF69B4'; // Вагонетка
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-            }
+    class Cloud {
+      constructor(x, y, scale, speed) {
+        this.x = x;
+        this.y = y;
+        this.scale = scale;
+        this.speed = speed;
+      }
+      update() {
+        this.x += this.speed;
+        if (this.x - 100 * this.scale > canvas.width) {
+          this.x = -100 * this.scale;
         }
-        class Shell {
-            constructor(x, y, vy) {
-                this.radius = canvas.width * 0.015; // Пропорция радиуса
-                this.x = x;
-                this.y = y;
-                this.vy = vy;
-                this.active = true;
-                this.bounced = false; // Отскочил ли мяч
-            }
+      }
+      draw() {
+        context.fillStyle = '#FFF';
+        context.beginPath();
+        context.arc(this.x, this.y, 30 * this.scale, Math.PI * 0.5, Math.PI * 1.5);
+        context.arc(this.x + 30 * this.scale, this.y - 30 * this.scale, 30 * this.scale, Math.PI * 1, Math.PI * 1.85);
+        context.arc(this.x + 60 * this.scale, this.y - 20 * this.scale, 20 * this.scale, Math.PI * 1.37, Math.PI * 1.91);
+        context.arc(this.x + 80 * this.scale, this.y, 30 * this.scale, Math.PI * 1.5, Math.PI * 0.5);
+        context.closePath();
+        context.fill();
+      }
+    }
 
-            update(delta) {
-                this.y += this.vy * delta;
+    class Mountain {
+      constructor(x, y, width, height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+      }
+      draw() {
+        // Рисуем гору
+        context.fillStyle = '#A0522D'; // Цвет сиены
+        context.beginPath();
+        context.moveTo(this.x, this.y);
+        context.lineTo(this.x + this.width / 2, this.y - this.height);
+        context.lineTo(this.x + this.width, this.y);
+        context.closePath();
+        context.fill();
 
-                // Отражение от балки
-                beams.forEach(beam => {
-                    if (this.y - this.radius <= beam.y + beam.height &&
-                        this.y - this.radius >= beam.y &&
-                        this.x >= beam.x && this.x <= beam.x + beam.width) {
-                        this.vy = Math.abs(this.vy); // Убедимся, что мяч продолжает двигаться вверх
-                        this.bounced = true;
-                    }
-                });
+        // Рисуем снежную шапку
+        context.fillStyle = '#FFF';
+        context.beginPath();
+        context.moveTo(this.x + this.width / 2, this.y - this.height);
+        context.lineTo(this.x + this.width * 0.6, this.y - this.height * 0.8);
+        context.lineTo(this.x + this.width * 0.4, this.y - this.height * 0.8);
+        context.closePath();
+        context.fill();
+      }
+    }
 
-                // Проверка на исчезновение мяча
-                if (this.y < 0 || this.y > canvas.height) {
-                    this.active = false;
-                }
+    let shells = [];
+    let clouds = [];
+    let mountains = [];
+    let cannon;
+    let wagon;
+    let upperBeam;
 
-                // Попадание по вагонетке
-                if (
-                    this.y + this.radius >= wagon.y &&
-                    this.x >= wagon.x &&
-                    this.x <= wagon.x + wagon.width
-                ) {
-                    if (this.bounced) {
-                        score++;
-                        updateUI();
-                        this.active = false;
-                    } else {
-                        this.vy = -Math.abs(this.vy); // Отскок от дна корзины, чтобы мяч падал вниз
-                    }
-                }
-            }
+    let shotsLeft = 20;
+    let score = 0;
+    let round = 1;
+    let timeLeft = 90;
+    let maxRounds = 10;
 
-            draw() {
-                ctx.fillStyle = "#000000";
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fill();
-            }
+    let gameOver = false;
+
+    let lastTime = Date.now();
+    let gameTimer;
+
+    function initGame() {
+      cannon = new Cannon();
+      wagon = new Wagon();
+      upperBeam = new Beam();
+
+      // Инициализируем облака
+      for (let i = 0; i < 5; i++) {
+        let x = Math.random() * canvas.width;
+        let y = canvas.height * 0.1 + Math.random() * canvas.height * 0.2;
+        let scale = 0.5 + Math.random() * 0.5;
+        let speed = 0.2 + Math.random() * 0.3;
+        clouds.push(new Cloud(x, y, scale, speed));
+      }
+
+      // Инициализируем горы
+      let mountainWidth = canvas.width / 4;
+      let mountainHeight = canvas.height / 3;
+      mountains.push(new Mountain(canvas.width * 0.1, canvas.height, mountainWidth, mountainHeight));
+      mountains.push(new Mountain(canvas.width * 0.4, canvas.height, mountainWidth, mountainHeight * 1.2));
+      mountains.push(new Mountain(canvas.width * 0.7, canvas.height, mountainWidth, mountainHeight * 0.8));
+
+      updateGameInfo();
+      startTimer();
+    }
+
+    function startTimer() {
+      gameTimer = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) {
+          timeLeft = 0;
+          checkGameOver();
         }
+        updateGameInfo();
+      }, 1000);
+    }
 
-        class Beam {
-            constructor(x, y, width, height) {
-                this.x = x;
-                this.y = y;
-                this.width = width;
-                this.height = height;
-            }
+    function updateGameInfo() {
+      document.getElementById('leftInfo').textContent = `Раунд: ${round} | Время: ${timeLeft}`;
+      document.getElementById('rightInfo').textContent = `Выстрелы: ${shotsLeft} | Счет: ${score % 10}`;
+    }
 
-            draw() {
-                ctx.fillStyle = '#8B4513';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-            }
+    function shoot() {
+      if (gameOver) return;
+      if (shotsLeft <= 0) return;
+
+      shotsLeft--;
+      updateGameInfo();
+
+      let shellX = cannon.x + cannon.width / 2;
+      let shellY = cannon.y;
+
+      let shell = new Shell(shellX, shellY);
+      shells.push(shell);
+
+      checkGameOver();
+    }
+
+    document.getElementById('shootButton').addEventListener('click', shoot);
+    window.addEventListener('keydown', function(event) {
+      if (event.code === 'Space') {
+        shoot();
+      }
+    });
+
+    function checkCollision(shell) {
+      // Столкновение с верхней балкой
+      if (!shell.bounced && shell.y - shell.radius <= upperBeam.y + upperBeam.height && shell.x >= upperBeam.x && shell.x <= upperBeam.x + upperBeam.width) {
+        shell.speedY *= -1;
+        shell.bounced = true;
+        shell.y = upperBeam.y + upperBeam.height + shell.radius;
+      }
+
+      // Столкновение с нижней балкой корзины
+      let lowerBeamY = wagon.y + wagon.height;
+      let lowerBeamHeight = canvas.height * 0.01;
+      if (!shell.bounced && shell.y - shell.radius <= lowerBeamY + lowerBeamHeight && shell.y + shell.radius >= lowerBeamY && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
+        shell.speedY *= -1;
+        shell.bounced = true;
+        shell.y = lowerBeamY + lowerBeamHeight + shell.radius;
+      }
+
+      // Столкновение с корзиной
+      if (shell.y - shell.radius <= wagon.y + wagon.height && shell.y + shell.radius >= wagon.y && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
+        if (shell.speedY < 0 && shell.y + shell.radius <= wagon.y + wagon.height) {
+          // Попадание в корзину сверху
+          score++;
+          updateGameInfo();
+          shell.active = false;
+
+          // Проверяем, набрал ли игрок 10 очков в текущем раунде
+          if (score % 10 === 0 && score !== 0) {
+            nextRound();
+          }
+        } else if (shell.speedY > 0 && shell.y - shell.radius >= wagon.y) {
+          // Отскок от дна корзины
+          shell.speedY *= -1;
+          shell.y = wagon.y - shell.radius;
         }
+      }
+    }
 
-        function shoot() {
-            if (shotsLeft > 0 && !shell) {
-                const shellX = cannon.x + cannon.width / 2;
-                const shellY = cannon.y;
-                const velocityY = -800;
-                shell = new Shell(shellX, shellY, velocityY);
-                shotsLeft--;
+    function nextRound() {
+      round++;
+      if (round > maxRounds) {
+        gameOver = true;
+        clearInterval(gameTimer);
+        alert('Поздравляем! Вы победили!');
+        return;
+      }
+      // Сбрасываем время и выстрелы
+      timeLeft = 90;
+      shotsLeft = 20;
+      updateGameInfo();
+    }
 
-                // Проверка на завершение игры
-                if (shotsLeft < maxScore - score) {
-                    endGame("Not enough shots left!", true);
-                }
+    function checkGameOver() {
+      let requiredScore = 10 * (round - 1) + 10;
+      let possibleShots = shotsLeft + shells.length;
+      let remainingHits = requiredScore - score;
+      if ((possibleShots < remainingHits && score % 10 !== 0) || (shotsLeft <= 0 && score % 10 !== 0) || timeLeft <= 0) {
+        gameOver = true;
+        clearInterval(gameTimer);
+        alert('Игра окончена! Вы не смогли достичь цели.');
+      }
+    }
 
-                updateUI();
-            }
-        }
+    function gameLoop() {
+      if (gameOver) return;
 
-        function updateUI() {
-            shotsText.textContent = `Shots: ${shotsLeft}`;
-            scoreText.textContent = `Score: ${score}`;
-            timeText.textContent = `Time: ${Math.ceil(timer)}`;
-            roundText.textContent = `Round: ${round}`;
-        }
+      context.clearRect(0, 0, canvas.width, canvas.height);
 
-        function startTimer() {
-            timerInterval = setInterval(() => {
-                if (timer > 0) {
-                    timer--;
-                    updateUI();
-                } else {
-                    clearInterval(timerInterval);
-                    endGame("Time's up! Try again!", true);
-                }
-            }, 1000);
-        }
+      // Рисуем фон
+      mountains.forEach(mountain => mountain.draw());
 
-        function endGame(message, restart) {
-            clearInterval(timerInterval);
-            roundMessage.textContent = message;
-            roundMessage.style.display = 'block';
+      clouds.forEach(cloud => {
+        cloud.update();
+        cloud.draw();
+      });
 
-            if (restart) {
-                setTimeout(() => {
-                    resetGame();
-                }, 3000);
-            }
-        }
+      upperBeam.draw();
 
-        function resetGame() {
-            round = 1;
-            score = 0;
-            shotsLeft = 20;
-            timer = 90;
-            roundMessage.style.display = 'none';
-            startTimer();
-        }
+      wagon.update();
+      wagon.draw();
 
-        function init() {
-            resizeCanvas();
-            createClouds();
-            cannon = new Cannon();
-            wagon = new Wagon();
-            beams = [
-                new Beam(50, 20, 200, 10),
-                new Beam(canvas.width - 250, 20, 200, 10)
-            ];
-            startTimer();
-            gameLoop();
-        }
+      cannon.update();
+      cannon.draw();
 
-        function gameLoop() {
-            const delta = 1 / 60;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            updateClouds();
-            drawClouds();
-            drawMountains();
-            cannon.update(delta);
-            wagon.update(delta);
-            cannon.draw();
-            wagon.draw();
-            beams.forEach(beam => beam.draw());
-            if (shell) {
-                shell.update(delta);
-                if (!shell.active) {
-                    shell = null;
-                }
-            }
-            if (shell) shell.draw();
-            requestAnimationFrame(gameLoop);
-        }
+      // Обновляем и рисуем ядра
+      shells.forEach(shell => {
+        shell.update();
+        checkCollision(shell);
+        shell.draw();
+      });
 
-        function resizeCanvas() {
-            const gameField = document.getElementById('gameField');
-            canvas.width = gameField.clientWidth;
-            canvas.height = gameField.clientHeight;
-        }
+      // Удаляем неактивные ядра
+      shells = shells.filter(shell => shell.active);
 
-        shootButton.addEventListener('click', function() {
-            shoot();
-        });
+      requestAnimationFrame(gameLoop);
+    }
 
-        window.onload = function() {
-            init();
-        };
-
-        window.addEventListener('resize', function() {
-            resizeCanvas();
-        });
-
-        // Включаем выстрел по пробелу
-        window.addEventListener('keydown', function(e) {
-            if (e.code === 'Space') {
-                shoot();
-            }
-        });
-    </script>
+    initGame();
+    gameLoop();
+  </script>
 </body>
 </html>
