@@ -120,12 +120,82 @@
         const shootButton = document.getElementById('shootButton');
         const roundMessage = document.getElementById('roundMessage');
 
+        let clouds = [];
         let cannon, wagon, shell = null;
         let shotsLeft = 20;
         let score = 0;
         let timer = 90;
         let round = 1;
         let timerInterval;
+
+        // Создаем облака
+        function createClouds() {
+            clouds = [];
+            for (let i = 0; i < 5; i++) {
+                let cloud = {
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * 100,
+                    size: Math.random() * 40 + 30,
+                    speed: Math.random() * 0.5 + 0.2
+                };
+                clouds.push(cloud);
+            }
+        }
+
+        function drawClouds() {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            clouds.forEach(cloud => {
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function updateClouds() {
+            clouds.forEach(cloud => {
+                cloud.x -= cloud.speed;
+                if (cloud.x < -cloud.size) {
+                    cloud.x = canvas.width + cloud.size;
+                    cloud.y = Math.random() * 100;
+                    cloud.size = Math.random() * 40 + 30;
+                    cloud.speed = Math.random() * 0.5 + 0.2;
+                }
+            });
+        }
+
+        // Рисуем горы
+        function drawMountains() {
+            ctx.fillStyle = 'rgba(139, 69, 19, 1)';
+            ctx.beginPath();
+            ctx.moveTo(50, canvas.height);
+            ctx.lineTo(canvas.width * 0.25, canvas.height * 0.4);
+            ctx.lineTo(canvas.width * 0.5, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.75, canvas.height);
+            ctx.lineTo(canvas.width, canvas.height * 0.5);
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            // Белые "шапки" на горах
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.25, canvas.height * 0.4);
+            ctx.lineTo(canvas.width * 0.22, canvas.height * 0.5);
+            ctx.lineTo(canvas.width * 0.28, canvas.height * 0.5);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(canvas.width * 0.9, canvas.height * 0.5);
+            ctx.lineTo(canvas.width * 0.88, canvas.height * 0.55);
+            ctx.lineTo(canvas.width * 0.92, canvas.height * 0.55);
+            ctx.closePath();
+            ctx.fill();
+        }
 
         class Cannon {
             constructor() {
@@ -172,7 +242,20 @@
             }
 
             draw() {
-                ctx.fillStyle = '#FF69B4';
+                ctx.strokeStyle = '#8B4513'; // Трос
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, this.y - 10); // Линия троса
+                ctx.lineTo(canvas.width, this.y - 10);
+                ctx.stroke();
+
+                ctx.strokeStyle = '#8B4513'; // Крепление вагонетки
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y - 10);
+                ctx.lineTo(this.x + this.width / 2, this.y);
+                ctx.stroke();
+
+                ctx.fillStyle = '#FF69B4'; // Вагонетка
                 ctx.fillRect(this.x, this.y, this.width, this.height);
             }
         }
@@ -265,6 +348,7 @@
 
         function init() {
             resizeCanvas();
+            createClouds();
             cannon = new Cannon();
             wagon = new Wagon();
             startTimer();
@@ -274,6 +358,9 @@
         function gameLoop() {
             const delta = 1 / 60;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            updateClouds();
+            drawClouds();
+            drawMountains();
             cannon.update(delta);
             wagon.update(delta);
             cannon.draw();
@@ -304,6 +391,13 @@
 
         window.addEventListener('resize', function() {
             resizeCanvas();
+        });
+
+        // Включаем выстрел по пробелу
+        window.addEventListener('keydown', function(e) {
+            if (e.code === 'Space') {
+                shoot();
+            }
         });
     </script>
 </body>
