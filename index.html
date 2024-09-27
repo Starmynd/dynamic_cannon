@@ -25,14 +25,14 @@
     }
     #gameInfo {
       position: absolute;
-      bottom: 70px;
+      top: 0;
       width: 100%;
       display: flex;
       justify-content: space-between;
       padding: 10px;
       font-size: 1em;
       color: #000;
-      border: 3px solid #000;
+      border-bottom: 3px solid #000;
       background-color: rgba(255, 255, 255, 0.8);
       box-sizing: border-box;
     }
@@ -186,16 +186,26 @@
       canvas.height = window.innerHeight - 80; // Adjusted for border and button height
       container.style.width = canvas.width + 'px';
       container.style.height = (canvas.height + 70) + 'px'; // Including button height
+
+      // Adjust positions if necessary
+      adjustPositions();
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
+
+    function adjustPositions() {
+      // Adjust the position of the upper beam
+      if (upperBeam) {
+        upperBeam.y = document.getElementById('gameInfo').offsetHeight;
+      }
+    }
 
     class Cannon {
       constructor() {
         this.width = canvas.width * 0.08;
         this.height = canvas.height * 0.05;
         this.x = (canvas.width - this.width) / 2;
-        this.y = canvas.height - this.height;
+        this.y = canvas.height - this.height - document.getElementById('shootButton').offsetHeight;
         this.baseSpeed = canvas.width * 0.003;
         this.speed = this.baseSpeed;
         this.direction = 1;
@@ -292,7 +302,7 @@
         this.width = canvas.width * 0.8;
         this.height = canvas.height * 0.01;
         this.x = (canvas.width - this.width) / 2;
-        this.y = canvas.height * 0.1;
+        this.y = document.getElementById('gameInfo').offsetHeight; // Start below the interface
       }
       draw() {
         context.fillStyle = '#555';
@@ -389,7 +399,7 @@
       clouds = [];
       for (let i = 0; i < 5; i++) {
         let x = Math.random() * canvas.width;
-        let y = canvas.height * 0.1 + Math.random() * canvas.height * 0.2;
+        let y = upperBeam.y + canvas.height * 0.05 + Math.random() * canvas.height * 0.2;
         let scale = 0.5 + Math.random() * 0.5;
         let speed = 0.2 + Math.random() * 0.3;
         clouds.push(new Cloud(x, y, scale, speed));
