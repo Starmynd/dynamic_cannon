@@ -280,4 +280,31 @@
             wagon.draw();
             if (shell) {
                 shell.update(delta);
-                if (!shell.active)
+                if (!shell.active) {
+                    shell = null;
+                }
+            }
+            if (shell) shell.draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resizeCanvas() {
+            const gameField = document.getElementById('gameField');
+            canvas.width = gameField.clientWidth;
+            canvas.height = gameField.clientHeight;
+        }
+
+        shootButton.addEventListener('click', function() {
+            shoot();
+        });
+
+        window.onload = function() {
+            init();
+        };
+
+        window.addEventListener('resize', function() {
+            resizeCanvas();
+        });
+    </script>
+</body>
+</html>
