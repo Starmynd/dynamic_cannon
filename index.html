@@ -12,12 +12,12 @@
       overflow: hidden;
       touch-action: none;
       font-family: 'Press Start 2P', cursive;
-      background-color: #000; /* Black background for welcome screen */
+      background-color: #000;
     }
     #gameContainer {
       position: relative;
       border: 5px solid #000;
-      margin: 0 auto; /* Center the game container */
+      margin: 0 auto;
     }
     #gameCanvas {
       display: block;
@@ -197,6 +197,10 @@
       // Adjust the position of the upper beam
       if (upperBeam) {
         upperBeam.y = document.getElementById('gameInfo').offsetHeight;
+      }
+      // Adjust the position of the cannon
+      if (cannon) {
+        cannon.y = canvas.height - cannon.height - document.getElementById('shootButton').offsetHeight;
       }
     }
 
@@ -644,7 +648,6 @@
 
     // Show welcome screen on page load
     showWelcomeScreen();
-
   </script>
 </body>
 </html>
