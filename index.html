@@ -287,7 +287,7 @@
                     if (this.y - this.radius <= beam.y + beam.height &&
                         this.y - this.radius >= beam.y &&
                         this.x >= beam.x && this.x <= beam.x + beam.width) {
-                        this.vy = -this.vy;
+                        this.vy = Math.abs(this.vy); // Убедимся, что мяч продолжает двигаться вверх
                         this.bounced = true;
                     }
                 });
@@ -308,7 +308,7 @@
                         this.active = false;
                         updateUI();
                     } else {
-                        this.vy = -this.vy; // Отскок от дна корзины
+                        this.vy = -Math.abs(this.vy); // Отскок от дна корзины, чтобы мяч падал вниз
                     }
                 }
             }
