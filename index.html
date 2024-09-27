@@ -144,15 +144,6 @@
     #restartButton:active {
       background-color: #45a049;
     }
-    /* Attribution */
-    #attribution {
-      position: absolute;
-      bottom: 80px;
-      width: 100%;
-      text-align: center;
-      font-size: 0.8em;
-      color: #fff;
-    }
   </style>
 </head>
 <body>
@@ -177,17 +168,588 @@
       <p>You did not reach the target. Try again!</p>
       <button id="restartButton">Restart Game</button>
     </div>
-    <!-- Attribution -->
-    <div id="attribution">
-      Music: "Battle of Kings" by Per Kiilstofte (https://machinimasound.com), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
-    </div>
   </div>
   <!-- Background music -->
   <audio id="backgroundMusic" src="background_music.mp3" loop></audio>
   <!-- Shooting sound effect -->
   <audio id="shootingSound" src="shooting_sound.mp3"></audio>
   <script>
-    // [JavaScript code remains the same as in the previous code block]
+    const canvas = document.getElementById('gameCanvas');
+    const context = canvas.getContext('2d');
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const startButton = document.getElementById('startButton');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const restartButton = document.getElementById('restartButton');
+    const roundAnnouncement = document.getElementById('roundAnnouncement');
+
+    const shootButton = document.getElementById('shootButton');
+
+    let cannon;
+    let wagon;
+    let upperBeam;
+
+    let shells = [];
+    let clouds = [];
+    let airplanes = [];
+    let cityBuildings = [];
+
+    let shotsLeft;
+    let score;
+    let round;
+    let timeLeft;
+    let maxRounds = 10;
+
+    let gameOver = false;
+    let shellOnScreen = false;
+    let gamePaused = false;
+
+    let gameTimer;
+    let airplaneTimer;
+
+    function resizeCanvas() {
+      const container = document.getElementById('gameContainer');
+      canvas.width = window.innerWidth - 10; // Adjusted for border
+      canvas.height = window.innerHeight - shootButton.offsetHeight - 10; // Adjusted for border and button height
+      container.style.width = canvas.width + 'px';
+      container.style.height = (canvas.height + shootButton.offsetHeight) + 'px'; // Including button height
+
+      adjustPositions();
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function adjustPositions() {
+      // Adjust the position of the upper beam
+      if (upperBeam) {
+        upperBeam.y = document.getElementById('gameInfo').offsetHeight + canvas.height * 0.1;
+      }
+      // Adjust the position of the cannon
+      if (cannon) {
+        cannon.y = canvas.height - cannon.height;
+      }
+      // Adjust the position of the buildings
+      if (cityBuildings.length > 0) {
+        cityBuildings.forEach(building => {
+          building.y = canvas.height - building.height;
+        });
+      }
+    }
+
+    class Cannon {
+      constructor() {
+        this.width = canvas.width * 0.08;
+        this.height = canvas.height * 0.03; // Reduced height
+        this.x = (canvas.width - this.width) / 2;
+        this.y = canvas.height - this.height;
+        this.baseSpeed = canvas.width * 0.003;
+        this.speed = this.baseSpeed;
+        this.direction = 1;
+      }
+      update() {
+        this.x += this.speed * this.direction;
+        if (this.x <= 0) {
+          this.x = 0;
+          this.direction *= -1;
+        }
+        if (this.x + this.width >= canvas.width) {
+          this.x = canvas.width - this.width;
+          this.direction *= -1;
+        }
+      }
+      draw() {
+        // Draw tank body
+        context.fillStyle = '#2F4F4F'; // Dark green military color
+        context.fillRect(this.x, this.y, this.width, this.height);
+        // Draw tank turret
+        context.fillRect(this.x + this.width * 0.4, this.y - this.height * 0.5, this.width * 0.2, this.height * 0.5);
+        // Draw tank barrel
+        context.fillRect(this.x + this.width * 0.48, this.y - this.height, this.width * 0.04, this.height * 0.5);
+        // Draw tank tracks
+        context.fillStyle = '#000';
+        context.fillRect(this.x, this.y + this.height, this.width, this.height * 0.2);
+      }
+    }
+
+    class Wagon {
+      constructor() {
+        this.width = canvas.width * 0.15;
+        this.height = canvas.height * 0.05;
+        this.x = (canvas.width - this.width) / 2;
+        this.y = canvas.height * 0.55;
+        this.baseSpeed = canvas.width * 0.002;
+        this.speed = this.baseSpeed;
+        this.direction = 1;
+      }
+      update() {
+        this.x += this.speed * this.direction;
+        if (this.x <= 0) {
+          this.x = 0;
+          this.direction *= -1;
+        }
+        if (this.x + this.width >= canvas.width) {
+          this.x = canvas.width - this.width;
+          this.direction *= -1;
+        }
+      }
+      draw() {
+        // Draw the basket (woven appearance)
+        context.fillStyle = '#8B4513';
+        context.fillRect(this.x, this.y, this.width, this.height);
+
+        // Draw woven pattern
+        context.strokeStyle = '#654321';
+        context.lineWidth = 2;
+        for (let i = 0; i < this.width; i += 10) {
+          context.beginPath();
+          context.moveTo(this.x + i, this.y);
+          context.lineTo(this.x + i, this.y + this.height);
+          context.stroke();
+        }
+        for (let i = 0; i < this.height; i += 10) {
+          context.beginPath();
+          context.moveTo(this.x, this.y + i);
+          context.lineTo(this.x + this.width, this.y + i);
+          context.stroke();
+        }
+
+        // Draw basket rim
+        context.fillStyle = '#A0522D';
+        context.fillRect(this.x - this.width * 0.05, this.y - this.height * 0.1, this.width * 1.1, this.height * 0.1);
+
+        // Draw support beam
+        context.strokeStyle = '#000';
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(this.x + this.width / 2, upperBeam.y + upperBeam.height);
+        context.lineTo(this.x + this.width / 2, this.y - this.height * 0.1);
+        context.stroke();
+
+        // Draw lower beam
+        context.fillStyle = '#555';
+        context.fillRect(this.x, this.y + this.height, this.width, canvas.height * 0.01);
+      }
+    }
+
+    class Shell {
+      constructor(x, y) {
+        this.radius = canvas.width * 0.015;
+        this.x = x;
+        this.y = y;
+        this.speedY = -canvas.height * 0.024; // Tripled the speed
+        this.bounced = false;
+        this.bouncedFromUpperBeam = false;
+        this.active = true;
+      }
+      update() {
+        this.y += this.speedY;
+        if (this.y + this.radius * 2 < 0 || this.y - this.radius > canvas.height) {
+          this.active = false;
+          shellOnScreen = false; // Allow shooting again
+        }
+      }
+      draw() {
+        context.fillStyle = '#000';
+        context.beginPath();
+        context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        context.fill();
+      }
+    }
+
+    class Beam {
+      constructor() {
+        this.width = canvas.width; // Full width
+        this.height = canvas.height * 0.01;
+        this.x = 0; // Start from left edge
+        this.y = document.getElementById('gameInfo').offsetHeight + canvas.height * 0.1;
+      }
+      draw() {
+        context.fillStyle = '#555';
+        context.fillRect(this.x, this.y, this.width, this.height);
+      }
+    }
+
+    class Cloud {
+      constructor(x, y, scale, speed) {
+        this.x = x;
+        this.y = y;
+        this.scale = scale;
+        this.speed = speed;
+      }
+      update() {
+        this.x += this.speed;
+        if (this.x - 100 * this.scale > canvas.width) {
+          this.x = -100 * this.scale;
+        }
+      }
+      draw() {
+        context.fillStyle = '#FFF';
+        context.beginPath();
+        context.arc(this.x, this.y, 30 * this.scale, Math.PI * 0.5, Math.PI * 1.5);
+        context.arc(this.x + 30 * this.scale, this.y - 30 * this.scale, 30 * this.scale, Math.PI * 1, Math.PI * 1.85);
+        context.arc(this.x + 60 * this.scale, this.y - 20 * this.scale, 20 * this.scale, Math.PI * 1.37, Math.PI * 1.91);
+        context.arc(this.x + 80 * this.scale, this.y, 30 * this.scale, Math.PI * 1.5, Math.PI * 0.5);
+        context.closePath();
+        context.fill();
+      }
+    }
+
+    class Airplane {
+      constructor() {
+        this.width = canvas.width * 0.02; // Smaller size
+        this.height = canvas.height * 0.015;
+        this.x = -this.width;
+        this.y = upperBeam.y + Math.random() * (canvas.height * 0.3);
+        this.speed = canvas.width * 0.006; // 4 times faster
+        this.active = true;
+      }
+      update() {
+        this.x += this.speed;
+        if (this.x > canvas.width) {
+          this.active = false;
+        }
+      }
+      draw() {
+        context.fillStyle = '#000';
+        context.beginPath();
+        // Draw fuselage
+        context.moveTo(this.x, this.y);
+        context.lineTo(this.x + this.width, this.y + this.height / 2);
+        context.lineTo(this.x, this.y + this.height);
+        context.closePath();
+        context.fill();
+        // Draw wings
+        context.fillRect(this.x + this.width * 0.2, this.y + this.height * 0.2, this.width * 0.6, this.height * 0.1);
+        context.fillRect(this.x + this.width * 0.2, this.y + this.height * 0.7, this.width * 0.6, this.height * 0.1);
+        // Draw tail
+        context.fillRect(this.x, this.y + this.height * 0.4, this.width * 0.3, this.height * 0.2);
+      }
+    }
+
+    class Building {
+      constructor(x, width, height) {
+        this.x = x;
+        this.width = width;
+        this.height = height;
+        this.y = canvas.height - height;
+      }
+      draw() {
+        context.fillStyle = '#FFF'; // White buildings
+        context.fillRect(this.x, this.y, this.width, this.height);
+
+        // Windows
+        context.fillStyle = '#000';
+        let windowRows = Math.floor(this.height / 20);
+        let windowCols = Math.floor(this.width / 15);
+        for (let i = 0; i < windowRows; i++) {
+          for (let j = 0; j < windowCols; j++) {
+            context.fillRect(
+              this.x + j * 15 + 5,
+              this.y + i * 20 + 5,
+              5,
+              10
+            );
+          }
+        }
+      }
+    }
+
+    function initGame() {
+      // Initialize variables
+      shotsLeft = 20;
+      score = 0;
+      round = 1;
+      timeLeft = 90;
+      gameOver = false;
+      shellOnScreen = false;
+      gamePaused = false;
+      shells = [];
+      airplanes = [];
+
+      // Initialize game elements
+      upperBeam = new Beam();
+      cannon = new Cannon();
+      wagon = new Wagon();
+
+      adjustPositions(); // Adjust positions after initializing elements
+
+      clouds = [];
+      for (let i = 0; i < 5; i++) {
+        let x = Math.random() * canvas.width;
+        let y = upperBeam.y + canvas.height * 0.05 + Math.random() * canvas.height * 0.2;
+        let scale = 0.5 + Math.random() * 0.5;
+        let speed = 0.2 + Math.random() * 0.3;
+        clouds.push(new Cloud(x, y, scale, speed));
+      }
+
+      // Create city skyline
+      cityBuildings = [];
+      let numberOfBuildings = 4; // 3-4 buildings
+      let buildingWidth = canvas.width / (numberOfBuildings + 2);
+      for (let i = 0; i < numberOfBuildings; i++) {
+        let x = (i + 1) * buildingWidth;
+        let width = buildingWidth * 0.8;
+        let height = canvas.height * 0.2 + Math.random() * canvas.height * 0.1;
+        cityBuildings.push(new Building(x, width, height));
+      }
+
+      updateGameInfo();
+      startRound();
+      startAirplanes();
+    }
+
+    function startAirplanes() {
+      airplaneTimer = setInterval(() => {
+        if (!gamePaused) {
+          airplanes.push(new Airplane());
+        }
+      }, 20000); // Every 20 seconds
+    }
+
+    function startRound() {
+      gamePaused = true;
+      showRoundAnnouncement();
+      setTimeout(() => {
+        hideRoundAnnouncement();
+        gamePaused = false;
+        startTimer();
+      }, 2000);
+    }
+
+    function startTimer() {
+      if (gameTimer) clearInterval(gameTimer);
+      gameTimer = setInterval(() => {
+        if (!gamePaused) {
+          timeLeft--;
+          if (timeLeft <= 0) {
+            timeLeft = 0;
+            checkGameOver();
+          }
+          updateGameInfo();
+        }
+      }, 1000);
+    }
+
+    function updateGameInfo() {
+      document.getElementById('leftInfo').textContent = `Round: ${round} | Time: ${timeLeft}`;
+      document.getElementById('rightInfo').textContent = `Shots: ${shotsLeft} | Score: ${score % 10}`;
+    }
+
+    function shoot() {
+      if (gameOver || gamePaused) return;
+      if (shotsLeft <= 0) return;
+      if (shellOnScreen) return;
+
+      // Play shooting sound
+      const shootingSound = document.getElementById('shootingSound');
+      shootingSound.currentTime = 0;
+      shootingSound.play();
+
+      shotsLeft--;
+      updateGameInfo();
+
+      let shellX = cannon.x + cannon.width / 2;
+      let shellY = cannon.y;
+
+      let shell = new Shell(shellX, shellY);
+      shells.push(shell);
+      shellOnScreen = true;
+
+      checkGameOver();
+    }
+
+    function handleShootEvent(event) {
+      event.preventDefault();
+      shoot();
+    }
+
+    shootButton.addEventListener('click', shoot);
+    window.addEventListener('keydown', function(event) {
+      if (event.code === 'Space') {
+        shoot();
+      }
+    });
+    canvas.addEventListener('touchstart', handleShootEvent);
+
+    function checkCollision(shell) {
+      // Collision with upper beam
+      if (!shell.bounced && shell.y - shell.radius <= upperBeam.y + upperBeam.height && shell.x >= upperBeam.x && shell.x <= upperBeam.x + upperBeam.width) {
+        shell.speedY *= -1;
+        shell.bounced = true;
+        shell.bouncedFromUpperBeam = true;
+        shell.y = upperBeam.y + upperBeam.height + shell.radius;
+      }
+
+      // Collision with basket bottom
+      if (shell.y + shell.radius >= wagon.y + wagon.height) {
+        if (shell.y - shell.radius <= wagon.y + wagon.height + canvas.height * 0.01 && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
+          // Bounce off the lower beam
+          shell.speedY *= -1;
+          shell.bounced = true;
+          shell.bouncedFromUpperBeam = false;
+          shell.y = wagon.y + wagon.height + canvas.height * 0.01 + shell.radius;
+        }
+      }
+
+      // Collision with the basket
+      if (shell.y + shell.radius >= wagon.y && shell.y - shell.radius <= wagon.y + wagon.height && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
+        if (shell.speedY > 0 && shell.bouncedFromUpperBeam && shell.y - shell.radius <= wagon.y) {
+          // Successful hit from the top
+          score++;
+          updateGameInfo();
+          shell.active = false;
+          shellOnScreen = false;
+
+          if (score % 10 === 0 && score !== 0) {
+            nextRound();
+          }
+        } else if (shell.speedY > 0) {
+          // Hit the side of the basket, shell disappears
+          shell.active = false;
+          shellOnScreen = false;
+        } else if (shell.speedY < 0) {
+          // Bounce off the bottom or inside the basket
+          shell.speedY *= -1;
+          shell.bounced = true;
+          shell.bouncedFromUpperBeam = false;
+          shell.y = wagon.y + wagon.height + shell.radius;
+        }
+      }
+    }
+
+    function nextRound() {
+      round++;
+      if (round > maxRounds) {
+        gameOver = true;
+        gamePaused = true;
+        showGameOverScreen(true);
+        return;
+      }
+      // Increase speed by 10%
+      cannon.speed = cannon.baseSpeed * Math.pow(1.1, round - 1);
+      wagon.speed = wagon.baseSpeed * Math.pow(1.1, round - 1);
+
+      timeLeft = 90;
+      shotsLeft = 20;
+      updateGameInfo();
+
+      gamePaused = true;
+      showRoundAnnouncement();
+      setTimeout(() => {
+        hideRoundAnnouncement();
+        gamePaused = false;
+        startTimer();
+      }, 2000);
+    }
+
+    function checkGameOver() {
+      let requiredScore = 10 * (round - 1) + 10;
+      let possibleShots = shotsLeft + (shellOnScreen ? 1 : 0);
+      let remainingHits = requiredScore - score;
+      if ((possibleShots < remainingHits && score % 10 !== 0) || (shotsLeft <= 0 && score % 10 !== 0) || timeLeft <= 0) {
+        gameOver = true;
+        gamePaused = true;
+        showGameOverScreen(false);
+      }
+    }
+
+    function gameLoop() {
+      if (gameOver) return;
+
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw city skyline
+      cityBuildings.forEach(building => building.draw());
+
+      clouds.forEach(cloud => {
+        if (!gamePaused) cloud.update();
+        cloud.draw();
+      });
+
+      airplanes.forEach((plane, index) => {
+        if (!gamePaused) plane.update();
+        plane.draw();
+        if (!plane.active) airplanes.splice(index, 1);
+      });
+
+      upperBeam.draw();
+
+      if (!gamePaused) {
+        wagon.update();
+        cannon.update();
+      }
+      wagon.draw();
+      cannon.draw();
+
+      shells.forEach(shell => {
+        if (!gamePaused) {
+          shell.update();
+          checkCollision(shell);
+        }
+        shell.draw();
+      });
+
+      shells = shells.filter(shell => shell.active);
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function showRoundAnnouncement() {
+      roundAnnouncement.textContent = `Round ${round}`;
+      roundAnnouncement.style.display = 'block';
+    }
+
+    function hideRoundAnnouncement() {
+      roundAnnouncement.style.display = 'none';
+    }
+
+    function showGameOverScreen(won) {
+      gameOverScreen.style.display = 'flex';
+      if (won) {
+        gameOverScreen.querySelector('h1').textContent = 'Congratulations!';
+        gameOverScreen.querySelector('p').textContent = 'You won the game!';
+      } else {
+        gameOverScreen.querySelector('h1').textContent = 'Game Over';
+        gameOverScreen.querySelector('p').textContent = 'You did not reach the target. Try again!';
+      }
+      clearInterval(gameTimer);
+      clearInterval(airplaneTimer);
+    }
+
+    function hideGameOverScreen() {
+      gameOverScreen.style.display = 'none';
+    }
+
+    function startGame() {
+      hideWelcomeScreen();
+      initGame();
+      gameLoop();
+      // Start background music
+      const bgMusic = document.getElementById('backgroundMusic');
+      bgMusic.volume = 0.05; // Reduced volume
+      bgMusic.play();
+    }
+
+    function restartGame() {
+      hideGameOverScreen();
+      initGame();
+      gameLoop();
+    }
+
+    function showWelcomeScreen() {
+      welcomeScreen.style.display = 'flex';
+    }
+
+    function hideWelcomeScreen() {
+      welcomeScreen.style.display = 'none';
+    }
+
+    startButton.addEventListener('click', startGame);
+    restartButton.addEventListener('click', restartGame);
+
+    // Show welcome screen on page load
+    showWelcomeScreen();
+
   </script>
 </body>
 </html>
