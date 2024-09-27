@@ -4,18 +4,20 @@
   <meta charset="UTF-8">
   <title>Dynamic Cannon</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <!-- Added Google Font -->
+  <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
       overflow: hidden;
       touch-action: none;
-      font-family: 'Press Start 2P', cursive; /* Applied new font */
+      font-family: 'Press Start 2P', cursive;
+      background-color: #000; /* Black background for welcome screen */
     }
     #gameContainer {
       position: relative;
-      border: 5px solid #000; /* Border around the game area */
+      border: 5px solid #000;
+      margin: 0 auto; /* Center the game container */
     }
     #gameCanvas {
       display: block;
@@ -30,8 +32,8 @@
       padding: 10px;
       font-size: 1em;
       color: #000;
-      border: 3px solid #000; /* Border around the interface box */
-      background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent background */
+      border: 3px solid #000;
+      background-color: rgba(255, 255, 255, 0.8);
       box-sizing: border-box;
     }
     #shootButton {
@@ -50,6 +52,98 @@
     #shootButton:active {
       background-color: #45a049;
     }
+    /* Welcome Screen Styles */
+    #welcomeScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    #welcomeScreen h1 {
+      font-size: 2em;
+      margin: 20px;
+      text-align: center;
+    }
+    #welcomeScreen p {
+      font-size: 1em;
+      margin: 20px;
+      max-width: 80%;
+      text-align: center;
+    }
+    #startButton {
+      padding: 20px 40px;
+      font-size: 1.5em;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-family: 'Press Start 2P', cursive;
+    }
+    #startButton:active {
+      background-color: #45a049;
+    }
+    /* Round Announcement Styles */
+    #roundAnnouncement {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2em;
+      color: #fff;
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 20px 40px;
+      border: 3px solid #fff;
+      display: none;
+      z-index: 10;
+      text-align: center;
+    }
+    /* Game Over Screen */
+    #gameOverScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      display: none;
+    }
+    #gameOverScreen h1 {
+      font-size: 2em;
+      margin: 20px;
+      text-align: center;
+    }
+    #gameOverScreen p {
+      font-size: 1em;
+      margin: 20px;
+      max-width: 80%;
+      text-align: center;
+    }
+    #restartButton {
+      padding: 20px 40px;
+      font-size: 1.5em;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-family: 'Press Start 2P', cursive;
+    }
+    #restartButton:active {
+      background-color: #45a049;
+    }
   </style>
 </head>
 <body>
@@ -60,12 +154,31 @@
       <div id="rightInfo">Shots: 20 | Score: 0</div>
     </div>
     <button id="shootButton">Shoot</button>
+    <!-- Welcome Screen -->
+    <div id="welcomeScreen">
+      <h1>Welcome to Dynamic Cannon</h1>
+      <p>Your mission is to score 10 points in each round by hitting the moving basket from the top after bouncing off the upper beam. You have 90 seconds and 20 shots per round. Good luck!</p>
+      <button id="startButton">Start Game</button>
+    </div>
+    <!-- Round Announcement -->
+    <div id="roundAnnouncement">Round 1</div>
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen">
+      <h1>Game Over</h1>
+      <p>You did not reach the target. Try again!</p>
+      <button id="restartButton">Restart Game</button>
+    </div>
   </div>
   <!-- Background music -->
   <audio id="backgroundMusic" src="https://www.bensound.com/bensound-music/bensound-buddy.mp3" loop></audio>
   <script>
     const canvas = document.getElementById('gameCanvas');
     const context = canvas.getContext('2d');
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const startButton = document.getElementById('startButton');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const restartButton = document.getElementById('restartButton');
+    const roundAnnouncement = document.getElementById('roundAnnouncement');
 
     function resizeCanvas() {
       const container = document.getElementById('gameContainer');
@@ -83,7 +196,8 @@
         this.height = canvas.height * 0.05;
         this.x = (canvas.width - this.width) / 2;
         this.y = canvas.height - this.height;
-        this.speed = canvas.width * 0.003;
+        this.baseSpeed = canvas.width * 0.003;
+        this.speed = this.baseSpeed;
         this.direction = 1;
       }
       update() {
@@ -117,7 +231,8 @@
         this.height = canvas.height * 0.05;
         this.x = (canvas.width - this.width) / 2;
         this.y = canvas.height * 0.55;
-        this.speed = canvas.width * 0.002;
+        this.baseSpeed = canvas.width * 0.002;
+        this.speed = this.baseSpeed;
         this.direction = 1;
       }
       update() {
@@ -243,18 +358,30 @@
     let wagon;
     let upperBeam;
 
-    let shotsLeft = 20;
-    let score = 0;
-    let round = 1;
-    let timeLeft = 90;
+    let shotsLeft;
+    let score;
+    let round;
+    let timeLeft;
     let maxRounds = 10;
 
     let gameOver = false;
     let shellOnScreen = false;
+    let gamePaused = false;
 
     let gameTimer;
+    let roundTimeout;
 
     function initGame() {
+      // Initialize variables
+      shotsLeft = 20;
+      score = 0;
+      round = 1;
+      timeLeft = 90;
+      gameOver = false;
+      shellOnScreen = false;
+      gamePaused = false;
+      shells = [];
+
       cannon = new Cannon();
       wagon = new Wagon();
       upperBeam = new Beam();
@@ -276,22 +403,30 @@
       mountains.push(new Mountain(canvas.width * 0.7, canvas.height, mountainWidth, mountainHeight * 0.8));
 
       updateGameInfo();
-      startTimer();
+      startRound();
+    }
 
-      // Start background music
-      const bgMusic = document.getElementById('backgroundMusic');
-      bgMusic.volume = 0.1; // Set low volume
-      bgMusic.play();
+    function startRound() {
+      gamePaused = true;
+      showRoundAnnouncement();
+      setTimeout(() => {
+        hideRoundAnnouncement();
+        gamePaused = false;
+        startTimer();
+      }, 2000);
     }
 
     function startTimer() {
+      if (gameTimer) clearInterval(gameTimer);
       gameTimer = setInterval(() => {
-        timeLeft--;
-        if (timeLeft <= 0) {
-          timeLeft = 0;
-          checkGameOver();
+        if (!gamePaused) {
+          timeLeft--;
+          if (timeLeft <= 0) {
+            timeLeft = 0;
+            checkGameOver();
+          }
+          updateGameInfo();
         }
-        updateGameInfo();
       }, 1000);
     }
 
@@ -301,7 +436,7 @@
     }
 
     function shoot() {
-      if (gameOver) return;
+      if (gameOver || gamePaused) return;
       if (shotsLeft <= 0) return;
       if (shellOnScreen) return;
 
@@ -380,13 +515,25 @@
       round++;
       if (round > maxRounds) {
         gameOver = true;
-        clearInterval(gameTimer);
-        alert('Congratulations! You won!');
+        gamePaused = true;
+        showGameOverScreen(true);
         return;
       }
+      // Increase speed by 10%
+      cannon.speed = cannon.baseSpeed * Math.pow(1.1, round - 1);
+      wagon.speed = wagon.baseSpeed * Math.pow(1.1, round - 1);
+
       timeLeft = 90;
       shotsLeft = 20;
       updateGameInfo();
+
+      gamePaused = true;
+      showRoundAnnouncement();
+      setTimeout(() => {
+        hideRoundAnnouncement();
+        gamePaused = false;
+        startTimer();
+      }, 2000);
     }
 
     function checkGameOver() {
@@ -395,8 +542,8 @@
       let remainingHits = requiredScore - score;
       if ((possibleShots < remainingHits && score % 10 !== 0) || (shotsLeft <= 0 && score % 10 !== 0) || timeLeft <= 0) {
         gameOver = true;
-        clearInterval(gameTimer);
-        alert('Game Over! You did not reach the target.');
+        gamePaused = true;
+        showGameOverScreen(false);
       }
     }
 
@@ -408,21 +555,24 @@
       mountains.forEach(mountain => mountain.draw());
 
       clouds.forEach(cloud => {
-        cloud.update();
+        if (!gamePaused) cloud.update();
         cloud.draw();
       });
 
       upperBeam.draw();
 
-      wagon.update();
+      if (!gamePaused) {
+        wagon.update();
+        cannon.update();
+      }
       wagon.draw();
-
-      cannon.update();
       cannon.draw();
 
       shells.forEach(shell => {
-        shell.update();
-        checkCollision(shell);
+        if (!gamePaused) {
+          shell.update();
+          checkCollision(shell);
+        }
         shell.draw();
       });
 
@@ -431,8 +581,60 @@
       requestAnimationFrame(gameLoop);
     }
 
-    initGame();
-    gameLoop();
+    function showRoundAnnouncement() {
+      roundAnnouncement.textContent = `Round ${round}`;
+      roundAnnouncement.style.display = 'block';
+    }
+
+    function hideRoundAnnouncement() {
+      roundAnnouncement.style.display = 'none';
+    }
+
+    function showGameOverScreen(won) {
+      gameOverScreen.style.display = 'flex';
+      if (won) {
+        gameOverScreen.querySelector('h1').textContent = 'Congratulations!';
+        gameOverScreen.querySelector('p').textContent = 'You won the game!';
+      } else {
+        gameOverScreen.querySelector('h1').textContent = 'Game Over';
+        gameOverScreen.querySelector('p').textContent = 'You did not reach the target. Try again!';
+      }
+    }
+
+    function hideGameOverScreen() {
+      gameOverScreen.style.display = 'none';
+    }
+
+    function startGame() {
+      hideWelcomeScreen();
+      initGame();
+      gameLoop();
+      // Start background music
+      const bgMusic = document.getElementById('backgroundMusic');
+      bgMusic.volume = 0.1;
+      bgMusic.play();
+    }
+
+    function restartGame() {
+      hideGameOverScreen();
+      initGame();
+      gameLoop();
+    }
+
+    function showWelcomeScreen() {
+      welcomeScreen.style.display = 'flex';
+    }
+
+    function hideWelcomeScreen() {
+      welcomeScreen.style.display = 'none';
+    }
+
+    startButton.addEventListener('click', startGame);
+    restartButton.addEventListener('click', restartGame);
+
+    // Show welcome screen on page load
+    showWelcomeScreen();
+
   </script>
 </body>
 </html>
