@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <title>Dynamic Cannon</title>
@@ -156,21 +156,23 @@
     <button id="shootButton">Shoot</button>
     <!-- Welcome Screen -->
     <div id="welcomeScreen">
-      <h1>Welcome to Dynamic Cannon</h1>
-      <p>Your mission is to score 10 points in each round by hitting the moving basket from the top after bouncing off the upper beam. You have 90 seconds and 20 shots per round. Good luck!</p>
-      <button id="startButton">Start Game</button>
+      <h1>Добро пожаловать в Dynamic Cannon</h1>
+      <p>Ваша задача — набрать 10 очков в каждом раунде, попадая в движущуюся корзину сверху после рикошета от верхней балки. У вас есть 90 секунд и 20 выстрелов на каждый раунд. Удачи!</p>
+      <button id="startButton">Начать игру</button>
     </div>
     <!-- Round Announcement -->
-    <div id="roundAnnouncement">Round 1</div>
+    <div id="roundAnnouncement">Раунд 1</div>
     <!-- Game Over Screen -->
     <div id="gameOverScreen">
-      <h1>Game Over</h1>
-      <p>You did not reach the target. Try again!</p>
-      <button id="restartButton">Restart Game</button>
+      <h1>Игра Окончена</h1>
+      <p>Вы не достигли цели. Попробуйте снова!</p>
+      <button id="restartButton">Перезапустить игру</button>
     </div>
   </div>
   <!-- Background music -->
   <audio id="backgroundMusic" src="https://www.bensound.com/bensound-music/bensound-buddy.mp3" loop></audio>
+  <!-- Shooting sound effect -->
+  <audio id="shootingSound" src="shooting_sound.mp3"></audio>
   <script>
     const canvas = document.getElementById('gameCanvas');
     const context = canvas.getContext('2d');
@@ -538,6 +540,11 @@
       if (shotsLeft <= 0) return;
       if (shellOnScreen) return;
 
+      // Play shooting sound
+      const shootingSound = document.getElementById('shootingSound');
+      shootingSound.currentTime = 0;
+      shootingSound.play();
+
       shotsLeft--;
       updateGameInfo();
 
@@ -688,7 +695,7 @@
     }
 
     function showRoundAnnouncement() {
-      roundAnnouncement.textContent = `Round ${round}`;
+      roundAnnouncement.textContent = `Раунд ${round}`;
       roundAnnouncement.style.display = 'block';
     }
 
@@ -699,11 +706,11 @@
     function showGameOverScreen(won) {
       gameOverScreen.style.display = 'flex';
       if (won) {
-        gameOverScreen.querySelector('h1').textContent = 'Congratulations!';
-        gameOverScreen.querySelector('p').textContent = 'You won the game!';
+        gameOverScreen.querySelector('h1').textContent = 'Поздравляем!';
+        gameOverScreen.querySelector('p').textContent = 'Вы выиграли игру!';
       } else {
-        gameOverScreen.querySelector('h1').textContent = 'Game Over';
-        gameOverScreen.querySelector('p').textContent = 'You did not reach the target. Try again!';
+        gameOverScreen.querySelector('h1').textContent = 'Игра Окончена';
+        gameOverScreen.querySelector('p').textContent = 'Вы не достигли цели. Попробуйте снова!';
       }
       clearInterval(gameTimer);
       clearInterval(airplaneTimer);
