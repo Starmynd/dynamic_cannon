@@ -5,8 +5,6 @@
     <title>Dynamic Cannon</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        /* CSS remains largely the same */
-
         body {
             margin: 0;
             padding: 0;
@@ -127,7 +125,7 @@
             <div class="infoRow" id="score">Score: 0/10</div>
             <button id="shootButton">Shoot</button>
         </div>
-        <div id="moon"></div> <!-- Add moon inside game container -->
+        <div id="moon"></div>
     </div>
 
     <script>
@@ -142,14 +140,11 @@
         const loadingScreen = document.getElementById('loadingScreen');
         const gameContainer = document.getElementById('gameContainer');
 
-        let clouds = [];
-        let cannon, wagon, shell = null;
+        let cannon, wagon;
         let shotsLeft = 20;
         let targetsHit = 0;
         let timer = 90;
         let round = 1;
-        let beams = [];
-        let timerInterval;
         let audioInitialized = false;
 
         // Audio objects
@@ -184,58 +179,93 @@
                 });
         }
 
-        function init() {
-            createClouds();
-            cannon = new Cannon();
-            wagon = new Wagon();
-            beams = [
-                new Beam(50, 150, 200, 10),
-                new Beam(canvas.width - 250, 200, 200, 10)
-            ];
-            startTimer();
-            gameLoop();
-            backgroundMusic.play().catch(error => console.log(error));
-        }
-
-        function createClouds() {
-            clouds = [];
-            for (let i = 0; i < 5; i++) {
-                let cloud = {
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * 100 + 50,
-                    size: Math.random() * 40 + 30,
-                    speed: Math.random() * 0.5 + 0.2
-                };
-                clouds.push(cloud);
+        // Define the Cannon class
+        class Cannon {
+            constructor() {
+                this.width = 60;
+                this.height = 40;
+                this.x = canvas.width / 2 - this.width / 2;
+                this.y = canvas.height - this.height - 10; // Position near bottom
+                this.speed = 100;
+                this.direction = 1;
             }
-        }
 
-        function gameLoop() {
-            const delta = 1 / 60;
-            updateClouds();
-            cannon.update(delta);
-            wagon.update(delta);
-            if (shell) {
-                shell.update(delta);
-                if (!shell.active) {
-                    shell = null;
+            draw() {
+                ctx.fillStyle = "#2F4F4F"; // Base color
+                ctx.fillRect(this.x, this.y, this.width, this.height); // Draw cannon base
+
+                // Draw cannon barrel
+                ctx.fillStyle = "#696969";
+                ctx.fillRect(this.x + this.width / 4, this.y - 20, this.width / 2, 20);
+
+                // Draw cannon tip
+                ctx.fillStyle = "#000000";
+                ctx.fillRect(this.x + this.width / 2 - 5, this.y - 40, 10, 30);
+            }
+
+            update(delta) {
+                // Logic for moving the cannon (if required in the game)
+                this.x += this.direction * this.speed * delta;
+                if (this.x > canvas.width - this.width || this.x < 0) {
+                    this.direction *= -1;
                 }
             }
-            draw();
-            requestAnimationFrame(gameLoop);
         }
 
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawClouds();
+        // Define the Wagon class
+        class Wagon {
+            constructor() {
+                this.width = 100;
+                this.height = 50;
+                this.x = canvas.width / 2 - this.width / 2;
+                this.y = canvas.height / 2; // Position in the middle
+                this.speed = 150;
+                this.direction = -1;
+            }
+
+            draw() {
+                // Draw the wagon (bucket)
+                ctx.fillStyle = '#D2691E'; // Wagon color
+                ctx.fillRect(this.x, this.y, this.width, this.height); // Wagon body
+
+                // Draw the wagon rope
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y);
+                ctx.lineTo(this.x + this.width / 2, this.y - 20);
+                ctx.stroke();
+            }
+
+            update(delta) {
+                // Logic for moving the wagon (if required)
+                this.x += this.direction * this.speed * delta;
+                if (this.x > canvas.width - this.width || this.x < 0) {
+                    this.direction *= -1;
+                }
+            }
+        }
+
+        // Initialize game objects
+        function init() {
+            cannon = new Cannon();
+            wagon = new Wagon();
+            gameLoop();
+        }
+
+        // Game loop
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+
+            // Draw and update game objects
             cannon.draw();
             wagon.draw();
-            beams.forEach(beam => beam.draw());
-            if (shell) shell.draw();
+
+            requestAnimationFrame(gameLoop); // Continue the game loop
         }
 
         window.onload = function() {
-            preloadAudio();
+            preloadAudio(); // Preload audio files and show the game
         };
 
         shootButton.addEventListener('click', function() {
@@ -258,61 +288,6 @@
                 audioInitialized = true;
             }
             shootSound.play().catch(error => console.log(error));
-        }
-
-        class Cannon {
-            // Define Cannon class
-            draw() {
-                ctx.fillStyle = "#2F4F4F";
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-            }
-        }
-
-        class Wagon {
-            // Define Wagon class
-            draw() {
-                ctx.fillStyle = "#D2691E";
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-            }
-        }
-
-        class Shell {
-            // Define Shell class
-            draw() {
-                ctx.fillStyle = "#000000";
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-
-        class Beam {
-            // Define Beam class
-            draw() {
-                ctx.fillStyle = '#8B4513';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-            }
-        }
-
-        function updateClouds() {
-            clouds.forEach(cloud => {
-                cloud.x -= cloud.speed;
-                if (cloud.x < -cloud.size) {
-                    cloud.x = canvas.width + cloud.size;
-                    cloud.y = Math.random() * 100 + 50;
-                    cloud.size = Math.random() * 40 + 30;
-                    cloud.speed = Math.random() * 0.5 + 0.2;
-                }
-            });
-        }
-
-        function drawClouds() {
-            ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-            clouds.forEach(cloud => {
-                ctx.beginPath();
-                ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
         }
     </script>
 </body>
