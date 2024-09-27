@@ -365,11 +365,11 @@
 
     class Airplane {
       constructor() {
-        this.width = canvas.width * 0.04;
-        this.height = canvas.height * 0.03;
+        this.width = canvas.width * 0.02; // Smaller size
+        this.height = canvas.height * 0.015;
         this.x = -this.width;
         this.y = upperBeam.y + Math.random() * (canvas.height * 0.3);
-        this.speed = canvas.width * 0.0015;
+        this.speed = canvas.width * 0.006; // 4 times faster
         this.active = true;
       }
       update() {
@@ -379,14 +379,19 @@
         }
       }
       draw() {
-        context.fillStyle = '#FF0000';
-        context.fillRect(this.x, this.y, this.width, this.height / 2);
+        context.fillStyle = '#000';
         context.beginPath();
-        context.moveTo(this.x + this.width / 2, this.y - this.height / 2);
+        // Draw fuselage
+        context.moveTo(this.x, this.y);
         context.lineTo(this.x + this.width, this.y + this.height / 2);
-        context.lineTo(this.x, this.y + this.height / 2);
+        context.lineTo(this.x, this.y + this.height);
         context.closePath();
         context.fill();
+        // Draw wings
+        context.fillRect(this.x + this.width * 0.2, this.y + this.height * 0.2, this.width * 0.6, this.height * 0.1);
+        context.fillRect(this.x + this.width * 0.2, this.y + this.height * 0.7, this.width * 0.6, this.height * 0.1);
+        // Draw tail
+        context.fillRect(this.x, this.y + this.height * 0.4, this.width * 0.3, this.height * 0.2);
       }
     }
 
@@ -398,17 +403,23 @@
         this.y = canvas.height - shootButton.offsetHeight - this.height;
       }
       draw() {
-        context.fillStyle = '#333';
-        context.fillRect(this.x, this.y, this.width, this.height);
+        context.fillStyle = '#555';
+        // Isometric effect
+        context.save();
+        context.translate(this.x + this.width / 2, this.y + this.height);
+        context.scale(1, 0.5);
+        context.rotate(-Math.PI / 4);
+        context.fillRect(-this.width / 2, -this.height, this.width, this.height);
+        context.restore();
 
-        // Windows
-        context.fillStyle = '#FFD700';
-        for (let i = 0; i < this.height / 20; i++) {
-          for (let j = 0; j < this.width / 15; j++) {
-            if (Math.random() > 0.5) {
-              context.fillRect(this.x + j * 15 + 5, this.y + i * 20 + 5, 5, 10);
-            }
-          }
+        // Windows stripes
+        context.strokeStyle = '#FFD700';
+        context.lineWidth = 1;
+        for (let i = 0; i < this.height / 10; i++) {
+          context.beginPath();
+          context.moveTo(this.x, this.y + i * 10);
+          context.lineTo(this.x + this.width, this.y + i * 10);
+          context.stroke();
         }
       }
     }
@@ -443,12 +454,12 @@
 
       // Create city skyline
       cityBuildings = [];
-      let numberOfBuildings = 10;
-      let buildingWidth = canvas.width / numberOfBuildings;
+      let numberOfBuildings = 4; // 3-4 buildings
+      let buildingWidth = canvas.width / (numberOfBuildings + 2);
       for (let i = 0; i < numberOfBuildings; i++) {
-        let x = i * buildingWidth;
-        let width = buildingWidth;
-        let height = canvas.height * 0.2 + Math.random() * canvas.height * 0.2;
+        let x = (i + 1) * buildingWidth;
+        let width = buildingWidth * 0.8;
+        let height = canvas.height * 0.15 + Math.random() * canvas.height * 0.1;
         cityBuildings.push(new Building(x, width, height));
       }
 
