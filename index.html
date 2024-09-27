@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>Dynamic Cannon</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <style>
     body {
       margin: 0;
       overflow: hidden;
+      touch-action: none; /* Предотвращает прокрутку при касании */
     }
     #gameCanvas {
       display: block;
@@ -14,12 +16,12 @@
     }
     #gameInfo {
       position: absolute;
-      bottom: 50px; /* Над кнопкой "Shoot" */
+      bottom: 60px; /* Над кнопкой "Shoot" */
       width: 100%;
       display: flex;
       justify-content: space-between;
       padding: 0 10px;
-      font-size: 18px;
+      font-size: 1.5em;
       font-family: sans-serif;
       color: #000;
     }
@@ -27,8 +29,8 @@
       position: absolute;
       bottom: 0;
       width: 100%;
-      height: 50px;
-      font-size: 24px;
+      height: 60px;
+      font-size: 2em;
       background-color: #4CAF50;
       color: white;
       border: none;
@@ -53,7 +55,7 @@
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight - 50; // Учитываем высоту кнопки
+      canvas.height = window.innerHeight - 60; // Учитываем высоту кнопки
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
@@ -64,8 +66,8 @@
         this.height = canvas.height * 0.05;
         this.x = (canvas.width - this.width) / 2;
         this.y = canvas.height - this.height;
-        this.speed = canvas.width * 0.003; // Скорость пропорциональна ширине экрана
-        this.direction = 1; // 1 - вправо, -1 - влево
+        this.speed = canvas.width * 0.003;
+        this.direction = 1;
       }
       update() {
         this.x += this.speed * this.direction;
@@ -81,7 +83,6 @@
       draw() {
         context.fillStyle = '#000';
         context.fillRect(this.x, this.y, this.width, this.height);
-        // Рисуем ствол пушки
         context.fillRect(this.x + this.width / 2 - this.width * 0.05, this.y - this.height * 0.5, this.width * 0.1, this.height * 0.5);
       }
     }
@@ -92,8 +93,8 @@
         this.height = canvas.height * 0.05;
         this.x = (canvas.width - this.width) / 2;
         this.y = canvas.height * 0.55;
-        this.speed = canvas.width * 0.002; // Скорость пропорциональна ширине экрана
-        this.direction = 1; // 1 - вправо, -1 - влево
+        this.speed = canvas.width * 0.002;
+        this.direction = 1;
       }
       update() {
         this.x += this.speed * this.direction;
@@ -107,7 +108,6 @@
         }
       }
       draw() {
-        // Рисуем крепление к тросу
         context.strokeStyle = '#000';
         context.lineWidth = 2;
         context.beginPath();
@@ -115,11 +115,9 @@
         context.lineTo(this.x + this.width / 2, this.y);
         context.stroke();
 
-        // Рисуем корзину
-        context.fillStyle = '#8B4513'; // Коричневый цвет
+        context.fillStyle = '#8B4513';
         context.fillRect(this.x, this.y, this.width, this.height);
 
-        // Рисуем нижнюю балку
         context.fillStyle = '#555';
         context.fillRect(this.x, this.y + this.height, this.width, canvas.height * 0.01);
       }
@@ -132,6 +130,7 @@
         this.y = y;
         this.speedY = -canvas.height * 0.008;
         this.bounced = false;
+        this.bouncedFromUpperBeam = false;
         this.active = true;
       }
       update() {
@@ -194,8 +193,7 @@
         this.height = height;
       }
       draw() {
-        // Рисуем гору
-        context.fillStyle = '#A0522D'; // Цвет сиены
+        context.fillStyle = '#A0522D';
         context.beginPath();
         context.moveTo(this.x, this.y);
         context.lineTo(this.x + this.width / 2, this.y - this.height);
@@ -203,7 +201,6 @@
         context.closePath();
         context.fill();
 
-        // Рисуем снежную шапку
         context.fillStyle = '#FFF';
         context.beginPath();
         context.moveTo(this.x + this.width / 2, this.y - this.height);
@@ -229,7 +226,6 @@
 
     let gameOver = false;
 
-    let lastTime = Date.now();
     let gameTimer;
 
     function initGame() {
@@ -237,7 +233,7 @@
       wagon = new Wagon();
       upperBeam = new Beam();
 
-      // Инициализируем облака
+      clouds = [];
       for (let i = 0; i < 5; i++) {
         let x = Math.random() * canvas.width;
         let y = canvas.height * 0.1 + Math.random() * canvas.height * 0.2;
@@ -246,7 +242,7 @@
         clouds.push(new Cloud(x, y, scale, speed));
       }
 
-      // Инициализируем горы
+      mountains = [];
       let mountainWidth = canvas.width / 4;
       let mountainHeight = canvas.height / 3;
       mountains.push(new Mountain(canvas.width * 0.1, canvas.height, mountainWidth, mountainHeight));
@@ -289,18 +285,26 @@
       checkGameOver();
     }
 
+    function handleShootEvent(event) {
+      event.preventDefault(); // Предотвращаем дополнительные действия
+      shoot();
+    }
+
     document.getElementById('shootButton').addEventListener('click', shoot);
     window.addEventListener('keydown', function(event) {
       if (event.code === 'Space') {
         shoot();
       }
     });
+    // Добавляем обработчик для касания экрана
+    canvas.addEventListener('touchstart', handleShootEvent);
 
     function checkCollision(shell) {
       // Столкновение с верхней балкой
       if (!shell.bounced && shell.y - shell.radius <= upperBeam.y + upperBeam.height && shell.x >= upperBeam.x && shell.x <= upperBeam.x + upperBeam.width) {
         shell.speedY *= -1;
         shell.bounced = true;
+        shell.bouncedFromUpperBeam = true;
         shell.y = upperBeam.y + upperBeam.height + shell.radius;
       }
 
@@ -310,25 +314,27 @@
       if (!shell.bounced && shell.y - shell.radius <= lowerBeamY + lowerBeamHeight && shell.y + shell.radius >= lowerBeamY && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
         shell.speedY *= -1;
         shell.bounced = true;
+        shell.bouncedFromUpperBeam = false; // Сбрасываем флаг
         shell.y = lowerBeamY + lowerBeamHeight + shell.radius;
       }
 
       // Столкновение с корзиной
-      if (shell.y - shell.radius <= wagon.y + wagon.height && shell.y + shell.radius >= wagon.y && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
-        if (shell.speedY < 0 && shell.y + shell.radius <= wagon.y + wagon.height) {
-          // Попадание в корзину сверху
+      if (shell.y + shell.radius >= wagon.y && shell.y - shell.radius <= wagon.y + wagon.height && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
+        if (shell.speedY > 0 && shell.bouncedFromUpperBeam) {
+          // Попадание в корзину сверху после отскока от верхней балки
           score++;
           updateGameInfo();
           shell.active = false;
 
-          // Проверяем, набрал ли игрок 10 очков в текущем раунде
           if (score % 10 === 0 && score !== 0) {
             nextRound();
           }
-        } else if (shell.speedY > 0 && shell.y - shell.radius >= wagon.y) {
+        } else if (shell.speedY < 0) {
           // Отскок от дна корзины
           shell.speedY *= -1;
-          shell.y = wagon.y - shell.radius;
+          shell.bounced = true;
+          shell.bouncedFromUpperBeam = false; // Сбрасываем флаг
+          shell.y = wagon.y + wagon.height + shell.radius;
         }
       }
     }
@@ -341,7 +347,6 @@
         alert('Поздравляем! Вы победили!');
         return;
       }
-      // Сбрасываем время и выстрелы
       timeLeft = 90;
       shotsLeft = 20;
       updateGameInfo();
@@ -363,7 +368,6 @@
 
       context.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Рисуем фон
       mountains.forEach(mountain => mountain.draw());
 
       clouds.forEach(cloud => {
@@ -379,14 +383,12 @@
       cannon.update();
       cannon.draw();
 
-      // Обновляем и рисуем ядра
       shells.forEach(shell => {
         shell.update();
         checkCollision(shell);
         shell.draw();
       });
 
-      // Удаляем неактивные ядра
       shells = shells.filter(shell => shell.active);
 
       requestAnimationFrame(gameLoop);
