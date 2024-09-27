@@ -1,41 +1,51 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Dynamic Cannon</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <!-- Added Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
       overflow: hidden;
-      touch-action: none; /* Предотвращает прокрутку при касании */
+      touch-action: none;
+      font-family: 'Press Start 2P', cursive; /* Applied new font */
+    }
+    #gameContainer {
+      position: relative;
+      border: 5px solid #000; /* Border around the game area */
     }
     #gameCanvas {
       display: block;
-      background: #87CEEB; /* Небесно-голубой фон */
+      background: #87CEEB;
     }
     #gameInfo {
       position: absolute;
-      bottom: 60px; /* Над кнопкой "Shoot" */
+      bottom: 70px;
       width: 100%;
       display: flex;
       justify-content: space-between;
-      padding: 0 10px;
-      font-size: 1.5em;
-      font-family: sans-serif;
+      padding: 10px;
+      font-size: 1em;
       color: #000;
+      border: 3px solid #000; /* Border around the interface box */
+      background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent background */
+      box-sizing: border-box;
     }
     #shootButton {
       position: absolute;
       bottom: 0;
       width: 100%;
-      height: 60px;
-      font-size: 2em;
+      height: 70px;
+      font-size: 1.5em;
       background-color: #4CAF50;
       color: white;
       border: none;
       outline: none;
       cursor: pointer;
+      font-family: 'Press Start 2P', cursive;
     }
     #shootButton:active {
       background-color: #45a049;
@@ -43,19 +53,26 @@
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas"></canvas>
-  <div id="gameInfo">
-    <div id="leftInfo">Раунд: 1 | Время: 90</div>
-    <div id="rightInfo">Выстрелы: 20 | Счет: 0</div>
+  <div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameInfo">
+      <div id="leftInfo">Round: 1 | Time: 90</div>
+      <div id="rightInfo">Shots: 20 | Score: 0</div>
+    </div>
+    <button id="shootButton">Shoot</button>
   </div>
-  <button id="shootButton">Shoot</button>
+  <!-- Background music -->
+  <audio id="backgroundMusic" src="https://www.bensound.com/bensound-music/bensound-buddy.mp3" loop></audio>
   <script>
     const canvas = document.getElementById('gameCanvas');
     const context = canvas.getContext('2d');
 
     function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight - 60; // Учитываем высоту кнопки
+      const container = document.getElementById('gameContainer');
+      canvas.width = window.innerWidth - 10; // Adjusted for border
+      canvas.height = window.innerHeight - 80; // Adjusted for border and button height
+      container.style.width = canvas.width + 'px';
+      container.style.height = (canvas.height + 70) + 'px'; // Including button height
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
@@ -81,9 +98,16 @@
         }
       }
       draw() {
-        context.fillStyle = '#000';
+        // Draw tank body
+        context.fillStyle = '#2F4F4F'; // Dark green military color
         context.fillRect(this.x, this.y, this.width, this.height);
-        context.fillRect(this.x + this.width / 2 - this.width * 0.05, this.y - this.height * 0.5, this.width * 0.1, this.height * 0.5);
+        // Draw tank turret
+        context.fillRect(this.x + this.width * 0.4, this.y - this.height * 0.5, this.width * 0.2, this.height * 0.5);
+        // Draw tank barrel
+        context.fillRect(this.x + this.width * 0.48, this.y - this.height, this.width * 0.04, this.height * 0.5);
+        // Draw tank tracks
+        context.fillStyle = '#000';
+        context.fillRect(this.x, this.y + this.height, this.width, this.height * 0.2);
       }
     }
 
@@ -137,6 +161,7 @@
         this.y += this.speedY;
         if (this.y + this.radius * 2 < 0 || this.y - this.radius > canvas.height) {
           this.active = false;
+          shellOnScreen = false; // Allow shooting again
         }
       }
       draw() {
@@ -225,6 +250,7 @@
     let maxRounds = 10;
 
     let gameOver = false;
+    let shellOnScreen = false;
 
     let gameTimer;
 
@@ -251,6 +277,11 @@
 
       updateGameInfo();
       startTimer();
+
+      // Start background music
+      const bgMusic = document.getElementById('backgroundMusic');
+      bgMusic.volume = 0.1; // Set low volume
+      bgMusic.play();
     }
 
     function startTimer() {
@@ -265,13 +296,14 @@
     }
 
     function updateGameInfo() {
-      document.getElementById('leftInfo').textContent = `Раунд: ${round} | Время: ${timeLeft}`;
-      document.getElementById('rightInfo').textContent = `Выстрелы: ${shotsLeft} | Счет: ${score % 10}`;
+      document.getElementById('leftInfo').textContent = `Round: ${round} | Time: ${timeLeft}`;
+      document.getElementById('rightInfo').textContent = `Shots: ${shotsLeft} | Score: ${score % 10}`;
     }
 
     function shoot() {
       if (gameOver) return;
       if (shotsLeft <= 0) return;
+      if (shellOnScreen) return;
 
       shotsLeft--;
       updateGameInfo();
@@ -281,12 +313,13 @@
 
       let shell = new Shell(shellX, shellY);
       shells.push(shell);
+      shellOnScreen = true;
 
       checkGameOver();
     }
 
     function handleShootEvent(event) {
-      event.preventDefault(); // Предотвращаем дополнительные действия
+      event.preventDefault();
       shoot();
     }
 
@@ -296,11 +329,10 @@
         shoot();
       }
     });
-    // Добавляем обработчик для касания экрана
     canvas.addEventListener('touchstart', handleShootEvent);
 
     function checkCollision(shell) {
-      // Столкновение с верхней балкой
+      // Collision with upper beam
       if (!shell.bounced && shell.y - shell.radius <= upperBeam.y + upperBeam.height && shell.x >= upperBeam.x && shell.x <= upperBeam.x + upperBeam.width) {
         shell.speedY *= -1;
         shell.bounced = true;
@@ -308,33 +340,38 @@
         shell.y = upperBeam.y + upperBeam.height + shell.radius;
       }
 
-      // Столкновение с нижней балкой корзины
+      // Collision with lower beam of the wagon
       let lowerBeamY = wagon.y + wagon.height;
       let lowerBeamHeight = canvas.height * 0.01;
       if (!shell.bounced && shell.y - shell.radius <= lowerBeamY + lowerBeamHeight && shell.y + shell.radius >= lowerBeamY && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
         shell.speedY *= -1;
         shell.bounced = true;
-        shell.bouncedFromUpperBeam = false; // Сбрасываем флаг
+        shell.bouncedFromUpperBeam = false;
         shell.y = lowerBeamY + lowerBeamHeight + shell.radius;
       }
 
-      // Столкновение с корзиной
+      // Collision with the wagon
       if (shell.y + shell.radius >= wagon.y && shell.y - shell.radius <= wagon.y + wagon.height && shell.x >= wagon.x && shell.x <= wagon.x + wagon.width) {
         if (shell.speedY > 0 && shell.bouncedFromUpperBeam) {
-          // Попадание в корзину сверху после отскока от верхней балки
+          // Successful hit
           score++;
           updateGameInfo();
           shell.active = false;
+          shellOnScreen = false;
 
           if (score % 10 === 0 && score !== 0) {
             nextRound();
           }
         } else if (shell.speedY < 0) {
-          // Отскок от дна корзины
+          // Bounce off the bottom
           shell.speedY *= -1;
           shell.bounced = true;
-          shell.bouncedFromUpperBeam = false; // Сбрасываем флаг
+          shell.bouncedFromUpperBeam = false;
           shell.y = wagon.y + wagon.height + shell.radius;
+        } else {
+          // If shell didn't bounce from upper beam, it disappears
+          shell.active = false;
+          shellOnScreen = false;
         }
       }
     }
@@ -344,7 +381,7 @@
       if (round > maxRounds) {
         gameOver = true;
         clearInterval(gameTimer);
-        alert('Поздравляем! Вы победили!');
+        alert('Congratulations! You won!');
         return;
       }
       timeLeft = 90;
@@ -354,12 +391,12 @@
 
     function checkGameOver() {
       let requiredScore = 10 * (round - 1) + 10;
-      let possibleShots = shotsLeft + shells.length;
+      let possibleShots = shotsLeft + (shellOnScreen ? 1 : 0);
       let remainingHits = requiredScore - score;
       if ((possibleShots < remainingHits && score % 10 !== 0) || (shotsLeft <= 0 && score % 10 !== 0) || timeLeft <= 0) {
         gameOver = true;
         clearInterval(gameTimer);
-        alert('Игра окончена! Вы не смогли достичь цели.');
+        alert('Game Over! You did not reach the target.');
       }
     }
 
